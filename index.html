@@ -626,6 +626,16 @@
           </select>
         </label>
       </div>
+      <div class="field-row">
+        <label class="field">
+          <span class="field-label">성별</span>
+          <select id="gender">
+            <option value="unspecified">선택안함</option>
+            <option value="male">남</option>
+            <option value="female">여</option>
+          </select>
+        </label>
+      </div>
       <button type="submit" class="draw-btn" id="sajuBtn">사주 분석하기</button>
       <p class="chat-disclaimer">재미로 보는 사주풀이예요. gpt-5.4-mini가 간지를 계산하고 해석합니다.</p>
     </form>
@@ -871,6 +881,7 @@
   const chatForm = document.getElementById('chatForm');
   const birthDateInput = document.getElementById('birthDate');
   const birthTimeSelect = document.getElementById('birthTime');
+  const genderSelect = document.getElementById('gender');
   const sajuBtn = document.getElementById('sajuBtn');
 
   const ELEMENT_ORDER = ['목', '화', '토', '금', '수'];
@@ -912,6 +923,7 @@
     const birthDate = birthDateInput.value;
     if (!birthDate) return;
     const birthTime = birthTimeSelect.value;
+    const gender = genderSelect.value;
 
     sajuBtn.disabled = true;
     sajuBtn.textContent = '분석 중...';
@@ -923,7 +935,7 @@
       const resp = await fetch('/api/saju', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ birthDate, birthTime }),
+        body: JSON.stringify({ birthDate, birthTime, gender }),
       });
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.error || '분석에 실패했습니다.');

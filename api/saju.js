@@ -19,6 +19,32 @@ function isValidDate(s) {
   return !Number.isNaN(t);
 }
 
+const VALID_GENDERS = new Set(['male', 'female', 'unspecified']);
+
+async function saveDraw(record) {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return;
+
+  try {
+    const resp = await fetch(url.replace(/\/$/, '') + '/rest/v1/saju_draws', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: key,
+        Authorization: 'Bearer ' + key,
+        Prefer: 'return=minimal',
+      },
+      body: JSON.stringify(record),
+    });
+    if (!resp.ok) {
+      console.error('Supabase insert failed', resp.status, await resp.text());
+    }
+  } catch (err) {
+    console.error('Supabase insert error', err);
+  }
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -33,6 +59,7 @@ module.exports = async function handler(req, res) {
   const body = req.body || {};
   const birthDate = body.birthDate;
   const birthTime = body.birthTime;
+  const gender = VALID_GENDERS.has(body.gender) ? body.gender : 'unspecified';
 
   if (!isValidDate(birthDate)) {
     return res.status(400).json({ error: '생년월일(YYYY-MM-DD)을 올바르게 입력해주세요.' });
@@ -110,11 +137,25 @@ module.exports = async function handler(req, res) {
     ? completion.dominantElement
     : ELEMENTS.reduce((a, b) => (elementCounts[b] > elementCounts[a] ? b : a), ELEMENTS[0]);
 
+  const pillars = completion.pillars || null;
+  const blurb = completion.blurb || '오늘도 좋은 기운이 함께하길 바라요.';
+
+  await saveDraw({
+    birth_date: birthDate,
+    birth_time: birthTime && birthTime !== 'unknown' ? birthTime : null,
+    gender,
+    pillars,
+    element_counts: elementCounts,
+    dominant_element: dominantElement,
+    blurb,
+    numbers,
+  });
+
   return res.status(200).json({
-    pillars: completion.pillars || null,
+    pillars,
     elementCounts,
     dominantElement,
-    blurb: completion.blurb || '오늘도 좋은 기운이 함께하길 바라요.',
+    blurb,
     numbers,
   });
 };
