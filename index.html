@@ -845,7 +845,15 @@
     isDrawing = false;
   }
 
-  drawBtn.addEventListener('click', runDraw);
+  drawBtn.addEventListener('click', () => {
+    if (typeof gtag === 'function') {
+      gtag('event', 'draw_click', {
+        event_category: 'lotto',
+        event_label: '번호 추첨하기',
+      });
+    }
+    runDraw();
+  });
 
   bonusToggle.addEventListener('click', () => {
     if (isDrawing) return;
