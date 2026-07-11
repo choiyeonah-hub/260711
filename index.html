@@ -372,6 +372,177 @@
     text-align: center;
     padding: 16px 0;
   }
+
+  .divider {
+    height: 1px;
+    background: var(--hairline);
+    border: none;
+    margin: 0;
+  }
+
+  .chat {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .chat-head h2 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 26px;
+    letter-spacing: -0.4px;
+    margin: 0 0 4px;
+    color: var(--ink);
+  }
+
+  .chat-sub {
+    margin: 0;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.55;
+  }
+
+  .chat-log {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 460px;
+    overflow-y: auto;
+  }
+
+  .bubble {
+    max-width: 90%;
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .bubble-user {
+    align-self: flex-end;
+    background: rgba(204, 120, 92, 0.12);
+    border: 1px solid rgba(204, 120, 92, 0.28);
+    color: var(--ink);
+  }
+
+  .bubble-bot {
+    align-self: flex-start;
+    background: var(--surface-card);
+    border: 1px solid var(--hairline);
+    color: var(--body);
+  }
+
+  .bubble-bot.loading { color: var(--muted); }
+
+  .pillars-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin: 2px 0 10px;
+  }
+
+  .pillar {
+    background: var(--surface-dark);
+    border-radius: 8px;
+    padding: 10px 4px;
+    text-align: center;
+  }
+
+  .pillar-label {
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--on-dark-soft);
+  }
+
+  .pillar-value {
+    font-family: var(--font-display);
+    font-size: 22px;
+    color: var(--on-dark);
+    margin-top: 2px;
+  }
+
+  .element-chips {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin: 0 0 10px;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 9999px;
+    font-size: 12px;
+    font-weight: 500;
+    background: var(--surface-cream-strong);
+    color: var(--ink);
+  }
+
+  .chip.dominant {
+    background: var(--primary);
+    color: var(--on-primary);
+  }
+
+  .bubble-blurb {
+    margin: 0 0 12px;
+  }
+
+  .chat-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: var(--surface-card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 16px;
+  }
+
+  .field-row {
+    display: flex;
+    gap: 10px;
+  }
+
+  .field {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .field-label {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  .field input,
+  .field select {
+    height: 40px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--hairline);
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 14px;
+    width: 100%;
+  }
+
+  .field input:focus,
+  .field select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(204, 120, 92, 0.15);
+  }
+
+  .chat-disclaimer {
+    margin: 0;
+    font-size: 12px;
+    color: var(--muted-soft);
+  }
 </style>
 
 <div class="stage">
@@ -409,6 +580,46 @@
     <div class="history-list" id="historyList">
       <div class="empty-hint" id="emptyHint">아직 추첨 기록이 없어요</div>
     </div>
+  </div>
+
+  <hr class="divider" />
+
+  <div class="chat">
+    <div class="chat-head">
+      <h2>사주로 번호 추천받기</h2>
+      <p class="chat-sub">생년월일과 태어난 시간을 입력하면 사주를 분석해서 어울리는 번호를 추천해드려요</p>
+    </div>
+
+    <div class="chat-log" id="chatLog"></div>
+
+    <form class="chat-form" id="chatForm">
+      <div class="field-row">
+        <label class="field">
+          <span class="field-label">생년월일 (양력)</span>
+          <input type="date" id="birthDate" required />
+        </label>
+        <label class="field">
+          <span class="field-label">태어난 시간</span>
+          <select id="birthTime">
+            <option value="unknown">모름</option>
+            <option value="23:00~00:59">23:00 ~ 00:59 (자시)</option>
+            <option value="01:00~02:59">01:00 ~ 02:59 (축시)</option>
+            <option value="03:00~04:59">03:00 ~ 04:59 (인시)</option>
+            <option value="05:00~06:59">05:00 ~ 06:59 (묘시)</option>
+            <option value="07:00~08:59">07:00 ~ 08:59 (진시)</option>
+            <option value="09:00~10:59">09:00 ~ 10:59 (사시)</option>
+            <option value="11:00~12:59">11:00 ~ 12:59 (오시)</option>
+            <option value="13:00~14:59">13:00 ~ 14:59 (미시)</option>
+            <option value="15:00~16:59">15:00 ~ 16:59 (신시)</option>
+            <option value="17:00~18:59">17:00 ~ 18:59 (유시)</option>
+            <option value="19:00~20:59">19:00 ~ 20:59 (술시)</option>
+            <option value="21:00~22:59">21:00 ~ 22:59 (해시)</option>
+          </select>
+        </label>
+      </div>
+      <button type="submit" class="draw-btn" id="sajuBtn">사주 분석하기</button>
+      <p class="chat-disclaimer">재미로 보는 사주풀이예요. gpt-5.4-mini가 간지를 계산하고 해석합니다.</p>
+    </form>
   </div>
 </div>
 
@@ -637,5 +848,131 @@
     if (isDrawing) return;
     history = [];
     renderHistory();
+  });
+
+  const chatLog = document.getElementById('chatLog');
+  const chatForm = document.getElementById('chatForm');
+  const birthDateInput = document.getElementById('birthDate');
+  const birthTimeSelect = document.getElementById('birthTime');
+  const sajuBtn = document.getElementById('sajuBtn');
+
+  const ELEMENT_ORDER = ['목', '화', '토', '금', '수'];
+  const PILLAR_LABELS = [
+    ['year', '년주'],
+    ['month', '월주'],
+    ['day', '일주'],
+    ['hour', '시주'],
+  ];
+
+  function timeLabel(value) {
+    if (!value || value === 'unknown') return '모름';
+    const opt = birthTimeSelect.querySelector('option[value="' + value + '"]');
+    return opt ? opt.textContent : value;
+  }
+
+  function addUserBubble(text) {
+    const el = document.createElement('div');
+    el.className = 'bubble bubble-user';
+    el.textContent = text;
+    chatLog.appendChild(el);
+    chatLog.scrollTop = chatLog.scrollHeight;
+    return el;
+  }
+
+  function addBotBubble(text) {
+    const el = document.createElement('div');
+    el.className = 'bubble bubble-bot loading';
+    el.textContent = text;
+    chatLog.appendChild(el);
+    chatLog.scrollTop = chatLog.scrollHeight;
+    return el;
+  }
+
+  chatForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (sajuBtn.disabled) return;
+
+    const birthDate = birthDateInput.value;
+    if (!birthDate) return;
+    const birthTime = birthTimeSelect.value;
+
+    sajuBtn.disabled = true;
+    sajuBtn.textContent = '분석 중...';
+
+    addUserBubble(birthDate + ' · 태어난 시간 ' + timeLabel(birthTime));
+    const botBubble = addBotBubble('사주를 분석하는 중...');
+
+    try {
+      const resp = await fetch('/api/saju', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ birthDate, birthTime }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || '분석에 실패했습니다.');
+
+      botBubble.className = 'bubble bubble-bot';
+      botBubble.textContent = '';
+
+      if (data.pillars) {
+        const grid = document.createElement('div');
+        grid.className = 'pillars-grid';
+        PILLAR_LABELS.forEach(([key, label]) => {
+          const cell = document.createElement('div');
+          cell.className = 'pillar';
+          const lab = document.createElement('div');
+          lab.className = 'pillar-label';
+          lab.textContent = label;
+          const val = document.createElement('div');
+          val.className = 'pillar-value';
+          val.textContent = data.pillars[key] || '−';
+          cell.appendChild(lab);
+          cell.appendChild(val);
+          grid.appendChild(cell);
+        });
+        botBubble.appendChild(grid);
+      }
+
+      if (data.elementCounts) {
+        const chips = document.createElement('div');
+        chips.className = 'element-chips';
+        ELEMENT_ORDER.forEach((el) => {
+          const chip = document.createElement('span');
+          chip.className = 'chip' + (el === data.dominantElement ? ' dominant' : '');
+          chip.textContent = el + ' ' + (data.elementCounts[el] || 0);
+          chips.appendChild(chip);
+        });
+        botBubble.appendChild(chips);
+      }
+
+      const blurb = document.createElement('p');
+      blurb.className = 'bubble-blurb';
+      blurb.textContent = data.blurb || '';
+      botBubble.appendChild(blurb);
+
+      const resultRow = document.createElement('div');
+      resultRow.className = 'balls-row';
+      resultRow.style.minHeight = 'auto';
+      botBubble.appendChild(resultRow);
+      chatLog.scrollTop = chatLog.scrollHeight;
+
+      const numbers = Array.isArray(data.numbers) ? data.numbers : [];
+      for (const n of numbers) {
+        await revealBall(resultRow, n, false);
+        chatLog.scrollTop = chatLog.scrollHeight;
+        if (!reduced) await sleep(120);
+      }
+
+      if (numbers.length) {
+        addHistory(numbers.slice().sort((a, b) => a - b));
+      }
+    } catch (err) {
+      botBubble.className = 'bubble bubble-bot';
+      botBubble.textContent = '앗, ' + (err.message || '분석 중 문제가 발생했어요.') + ' 잠시 후 다시 시도해주세요.';
+    } finally {
+      sajuBtn.disabled = false;
+      sajuBtn.textContent = '사주 분석하기';
+      chatLog.scrollTop = chatLog.scrollHeight;
+    }
   });
 </script>
