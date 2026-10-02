@@ -97,6 +97,7 @@ export interface OrganizationSession {
   recognitionSuccessCount?: number // 사진에서 찾은 후보를 그대로 선택
   recognitionFailureCount?: number // 사진을 찍었지만 검색/직접입력으로 등록
   phaseMinutes?: Partial<Record<WorkPhase, number>>
+  recognitionEngines?: string[] // 사용한 사진 인식 엔진/모델 (Opus·Haiku 비교용)
   // 종료 시 스냅샷 (이후 약이 수정/삭제돼도 사업성 데이터는 유지)
   summary: {
     registeredCount: number

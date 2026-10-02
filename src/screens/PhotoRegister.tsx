@@ -251,7 +251,7 @@ export function PhotoRegister() {
         <MedicineForm
           key={chosen.name + (expiry.value ?? '') + (photo ? 'p' : '')}
           prefill={prefill}
-          entry={{ method: 'photo', recognized: chosen.recognized }}
+          entry={{ method: 'photo', recognized: chosen.recognized, engine: recog?.ocr?.engineLabel }}
           onSaveNextPhoto={onSavedNext}
           top={
             <>

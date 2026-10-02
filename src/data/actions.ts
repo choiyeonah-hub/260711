@@ -109,7 +109,7 @@ export function bumpDiscarded(d: AppData, sessionId: string, delta: number): App
   }
 }
 
-export type EntryMethod = { method: 'manual' } | { method: 'photo'; recognized: boolean }
+export type EntryMethod = { method: 'manual' } | { method: 'photo'; recognized: boolean; engine?: string }
 
 // 새 약 등록 1건을 정리 세션 통계에 반영
 export function recordEntry(d: AppData, sessionId: string, e: EntryMethod): AppData {
@@ -123,6 +123,9 @@ export function recordEntry(d: AppData, sessionId: string, e: EntryMethod): AppD
         photoEntryCount: (s.photoEntryCount ?? 0) + 1,
         recognitionSuccessCount: (s.recognitionSuccessCount ?? 0) + (e.recognized ? 1 : 0),
         recognitionFailureCount: (s.recognitionFailureCount ?? 0) + (e.recognized ? 0 : 1),
+        recognitionEngines: e.engine && !(s.recognitionEngines ?? []).includes(e.engine)
+          ? [...(s.recognitionEngines ?? []), e.engine]
+          : s.recognitionEngines,
       }
     }),
   }

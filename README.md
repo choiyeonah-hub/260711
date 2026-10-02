@@ -17,6 +17,17 @@ npm run build && npm run preview -- --host   # 배포본과 동일하게 확인
 - 데이터는 그 기기 브라우저의 IndexedDB에 저장됩니다 (새로고침해도 유지, 서버 없음).
 - 사진 AI 인식(선택): `.env.example` → `.env.local` 복사 후 `ANTHROPIC_API_KEY` 입력. Vercel은 프로젝트 환경변수에 같은 이름으로 등록. 키가 없으면 기기 내 OCR로 자동 동작합니다.
 
+## 배포 (Vercel)
+
+- `main`에 푸시하면 Vercel이 `vercel.json` 설정(Vite 빌드 → `dist`)으로 자동 배포
+- AI 사진 인식: Vercel → Project → Settings → Environment Variables 에 `ANTHROPIC_API_KEY` 등록 후 **Redeploy** (키는 https://console.anthropic.com 에서 발급, 사용 한도 설정 권장)
+- 키가 없거나 만료되면 앱은 자동으로 기기 OCR로 동작 (등록 흐름은 막히지 않음)
+
+### Opus → Haiku 인식률 비교 절차
+1. 첫 방문: `RECOGNIZE_MODEL` 비워둠(기본 `claude-opus-5-5`) → 정리 완료 화면의 **인식 엔진 · 사진인식 성공**이 기준값
+2. 다음 방문 전: `RECOGNIZE_MODEL=claude-haiku-4-5` 설정 후 Redeploy
+3. 설정 → 정리 작업 기록에서 세션별 엔진·성공률·작업시간 비교
+
 ## 구현된 기능
 
 - 홈: 총 의약품 / 유효기간 임박(90일 이내) / 만료, 다가오는 진료·처방 일정(D-day), 가족별 약장 요약, 큰 검색창(이름·분류·위치·가족)

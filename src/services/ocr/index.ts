@@ -10,6 +10,7 @@ export type RecognizeMode = 'product' | 'expiry'
 
 export interface OcrResult {
   engine: 'ai' | 'device'
+  engineLabel: string // 예: 'AI(claude-opus-5-5)', '기기 OCR' — 세션 비교용
   productName: string | null
   manufacturer: string | null
   strength: string | null
@@ -19,12 +20,16 @@ export interface OcrResult {
 }
 
 let serverAvailable: Promise<boolean> | null = null
+let serverModel = 'unknown'
 
 // 서버 AI 인식 사용 가능 여부 (키 미설정/로컬 실행이면 false → 기기 OCR)
 export function checkServer(): Promise<boolean> {
   serverAvailable ??= fetch('/api/recognize', { method: 'GET' })
     .then((r) => r.json())
-    .then((j) => j?.available === true)
+    .then((j) => {
+      if (j?.model) serverModel = j.model
+      return j?.available === true
+    })
     .catch(() => false)
   return serverAvailable
 }
@@ -55,6 +60,7 @@ async function recognizeOnServer(image: Blob, mode: RecognizeMode): Promise<OcrR
     const s = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null)
     return {
       engine: 'ai',
+      engineLabel: `AI(${serverModel})`,
       productName: s(j.product_name),
       manufacturer: s(j.manufacturer),
       strength: s(j.strength),
@@ -90,6 +96,7 @@ async function recognizeOnDevice(image: Blob): Promise<OcrResult> {
   const lines = data.text.split('\n').map((l) => l.trim()).filter((l) => l.length >= 2)
   return {
     engine: 'device',
+    engineLabel: '기기 OCR',
     productName: null,
     manufacturer: null,
     strength: null,

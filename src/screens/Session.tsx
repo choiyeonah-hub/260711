@@ -175,6 +175,7 @@ export function SessionSummary({ id }: { id: string }) {
           <dt className="sub">· 복용 여부 확인 필요 처방약</dt><dd className="sub">{sum.rxUseUnknownCount ?? '-'}</dd>
           <dt>이번에 등록</dt><dd>{sum.registeredCount}개</dd>
           <dt>사진인식 성공</dt><dd>{sum.recognitionSuccessCount ?? 0}/{sum.registeredCount}{sum.recognitionSuccessRate != null ? ` (사진 중 ${sum.recognitionSuccessRate}%)` : ''}</dd>
+          <dt>인식 엔진</dt><dd>{s.recognitionEngines?.join(', ') || '-'}</dd>
           <dt>사진 / 직접 입력</dt><dd>{sum.photoEntryCount ?? 0} / {sum.manualEntryCount ?? 0}</dd>
           <dt>총 작업시간</dt><dd>{sum.durationMin}분</dd>
           <dt>수납 방식</dt><dd>{s.storageMethods.join(', ') || '-'}</dd>
