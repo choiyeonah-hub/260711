@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react'
+import { Archive, CalendarDays, House, Plus, Settings2, type LucideIcon } from 'lucide-react'
+import { AddChooser, ItemRegister } from './screens/AddItem'
 import { NavCtx, type Nav, type Route, type Tab } from './nav'
 import { Home } from './screens/Home'
 import { MedicineForm } from './screens/MedicineForm'
@@ -8,12 +10,12 @@ import { Cabinet, MedicineList, Notifications, Schedule } from './screens/Browse
 import { SessionBar, SessionStart, SessionSummary, SurveyScreen } from './screens/Session'
 import { NewHousehold, Settings } from './screens/Settings'
 
-const TABS: { tab: Tab; label: string; icon: string }[] = [
-  { tab: 'home', label: '홈', icon: '🏠' },
-  { tab: 'cabinet', label: '약장', icon: '🗄️' },
-  { tab: 'add', label: '약등록', icon: '+' },
-  { tab: 'schedule', label: '일정', icon: '📅' },
-  { tab: 'settings', label: '설정', icon: '⚙️' },
+const TABS: { tab: Tab; label: string; icon: LucideIcon }[] = [
+  { tab: 'home', label: '홈', icon: House },
+  { tab: 'cabinet', label: '약장', icon: Archive },
+  { tab: 'add', label: '약등록', icon: Plus },
+  { tab: 'schedule', label: '일정', icon: CalendarDays },
+  { tab: 'settings', label: '설정', icon: Settings2 },
 ]
 
 export default function App() {
@@ -35,7 +37,7 @@ export default function App() {
     }
   }, [])
 
-  const activeTab: Tab = route.name === 'add' ? 'add' : (stack[0].name as Tab)
+  const activeTab: Tab = ['add', 'addMedicine', 'addItem'].includes(route.name) ? 'add' : (stack[0].name as Tab)
 
   return (
     <NavCtx.Provider value={nav}>
@@ -44,7 +46,7 @@ export default function App() {
       <nav className="tabbar">
         {TABS.map((t) => (
           <button key={t.tab} className={`tab ${t.tab === 'add' ? 'tab-add' : ''} ${activeTab === t.tab ? 'on' : ''}`} onClick={() => nav.tab(t.tab)}>
-            <span className="tab-icon">{t.icon}</span>
+            <span className="tab-icon"><t.icon size={t.tab === 'add' ? 30 : 24} strokeWidth={t.tab === 'add' ? 2.25 : 1.9} /></span>
             <span>{t.label}</span>
           </button>
         ))}
@@ -59,7 +61,9 @@ function renderRoute(r: Route) {
     case 'cabinet': return <Cabinet />
     case 'schedule': return <Schedule />
     case 'settings': return <Settings />
-    case 'add': return <PhotoRegister />
+    case 'add': return <AddChooser />
+    case 'addMedicine': return <PhotoRegister />
+    case 'addItem': return <ItemRegister productType={r.productType} />
     case 'edit': return <MedicineForm id={r.id} />
     case 'list': return <MedicineList title={r.title} filter={r.filter} />
     case 'notifications': return <Notifications />

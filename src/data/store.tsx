@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
-import type { AppData } from '../types'
+import type { AppData, ProductType } from '../types'
 import { emptyData, normalizeData } from './defaults'
 import { localRepository as repo } from './repository'
 import { addSampleHousehold } from './sample'
@@ -61,5 +61,7 @@ export function useHousehold() {
     medicines: data.medicines.filter((m) => m.householdId === hid),
     locations: data.storageLocations.filter((l) => l.householdId === hid),
     categories: [...data.categories].sort((a, b) => a.order - b.order),
+    categoriesOf: (kind: ProductType) =>
+      [...data.categories].filter((c) => (c.kind ?? 'MEDICINE') === kind).sort((a, b) => a.order - b.order),
   }
 }

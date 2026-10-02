@@ -4,6 +4,9 @@ import { activeSession } from '../data/actions'
 import { dday, expiryStatus, formatMD, isSoon } from '../lib/dates'
 import { computeReminders, upcomingAppointments } from '../lib/reminders'
 import { useNav } from '../nav'
+import { Bell, BriefcaseMedical, ChevronDown, ClipboardList, House, ListChecks, Search, ShieldCheck, X } from 'lucide-react'
+import { PRODUCT_TYPES, PRODUCT_TYPE_SHORT } from '../types'
+import { isMedicine, productTypeOf } from '../data/medicineMeta'
 import { safetyInfo } from '../services/safety'
 import { PREPAREDNESS_ITEMS, preparednessStatus } from '../services/preparedness'
 import { Empty, MedicineCard, sortMedicines } from '../components/ui'
@@ -50,41 +53,43 @@ export function Home() {
 
   const people = members.filter((m) => !m.isShared)
   const sharedIds = new Set(members.filter((m) => m.isShared).map((m) => m.id))
-  const sharedMeds = medicines.filter((m) => !m.familyMemberId || sharedIds.has(m.familyMemberId))
+  const sharedMeds = medicines.filter((m) => isMedicine(m) && (!m.familyMemberId || sharedIds.has(m.familyMemberId)))
+  const typeCounts = PRODUCT_TYPES.map((t) => [t, medicines.filter((m) => productTypeOf(m) === t).length] as const)
+  const multiType = typeCounts.filter(([, n]) => n > 0).length > 1
 
   return (
     <div className="screen">
       <header className="home-head">
         <button className="household-btn" onClick={() => nav.tab('settings')}>
-          🏠 {household.name} <span className="muted">▾</span>
+          <House size={22} strokeWidth={1.9} aria-hidden /> {household.name} <ChevronDown size={18} className="muted" aria-hidden />
         </button>
         <button className="icon-btn bell" onClick={() => nav.push({ name: 'notifications' })} aria-label="알림">
-          🔔{unread > 0 && <span className="dot">{unread}</span>}
+          <Bell size={24} strokeWidth={1.9} />{unread > 0 && <span className="dot">{unread}</span>}
         </button>
       </header>
 
       <div className="search">
-        <span>🔍</span>
+        <Search size={20} className="muted" aria-hidden />
         <input
           type="search"
-          placeholder="약 이름 · 분류 · 위치 검색"
+          placeholder="이름 · 분류 · 위치 검색"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           enterKeyHint="search"
         />
-        {q && <button className="clear" onClick={() => setQ('')} aria-label="지우기">✕</button>}
+        {q && <button className="clear" onClick={() => setQ('')} aria-label="지우기"><X size={20} /></button>}
       </div>
 
       {query ? (
         <section>
           <p className="section-title">검색 결과 {results.length}개</p>
-          {results.length ? results.map((m) => <MedicineCard key={m.id} m={m} />) : <Empty>‘{q}’와 일치하는 약이 없습니다.</Empty>}
+          {results.length ? results.map((m) => <MedicineCard key={m.id} m={m} />) : <Empty>‘{q}’와 일치하는 품목이 없습니다.</Empty>}
         </section>
       ) : (
         <>
           <div className="stats">
-            <button className="stat" onClick={() => nav.push({ name: 'list', title: '전체 의약품', filter: {} })}>
-              <b>{medicines.length}</b><span>총 의약품</span>
+            <button className="stat" onClick={() => nav.push({ name: 'list', title: multiType ? '등록 품목 전체' : '전체 의약품', filter: {} })}>
+              <b>{medicines.length}</b><span>{multiType ? '등록 품목' : '총 의약품'}</span>
             </button>
             <button className={`stat ${soon ? 'warn' : ''}`} onClick={() => nav.push({ name: 'list', title: '유효기간 임박 (90일 이내)', filter: { expiry: 'soon' } })}>
               <b>{soon}</b><span>유효기간 임박</span>
@@ -93,36 +98,41 @@ export function Home() {
               <b>{expired}</b><span>만료</span>
             </button>
           </div>
+          {multiType && (
+            <p className="type-breakdown">
+              {typeCounts.filter(([, n]) => n > 0).map(([t, n]) => `${PRODUCT_TYPE_SHORT[t]} ${n}`).join(' · ')}
+            </p>
+          )}
 
           <div className="tool-grid">
             <button className="card tool" onClick={() => nav.push({ name: 'safety' })}>
-              <span className="tool-icon">🛡️</span>
+              <ShieldCheck className="tool-icon" size={26} strokeWidth={1.75} aria-hidden />
               <span>약장 안전확인</span>
-              {critical > 0 && <span className="dot static">🔴 {critical}</span>}
+              {critical > 0 ? <span className="pill danger">확인 {critical}</span> : <span className="pill">이상 없음</span>}
             </button>
             <button className="card tool" onClick={() => nav.push({ name: 'prep' })}>
-              <span className="tool-icon">🧰</span>
+              <BriefcaseMedical className="tool-icon" size={26} strokeWidth={1.75} aria-hidden />
               <span>우리집 준비 체크</span>
-              {missing > 0 && <span className="muted small">없음 {missing}</span>}
+              {missing > 0 ? <span className="pill warn">없음 {missing}</span> : <span className="pill">보기</span>}
             </button>
             <button className="card tool" onClick={() => nav.push({ name: 'questions' })}>
-              <span className="tool-icon">📝</span>
+              <ClipboardList className="tool-icon" size={26} strokeWidth={1.75} aria-hidden />
               <span>약사 확인 목록</span>
-              {openQs > 0 && <span className="muted small">{openQs}건</span>}
+              <span className="pill">{openQs}건</span>
             </button>
           </div>
 
           {session ? (
             <button className="card session-cta active" onClick={() => nav.push({ name: 'add' })}>
-              🧹 약장 정리 진행 중 — 약 등록 계속하기
+              <ListChecks size={22} aria-hidden /> 약장 정리 진행 중 · 등록 계속하기
             </button>
           ) : (
             <button className="card session-cta" onClick={() => nav.push({ name: 'sessionStart' })}>
-              🧹 약장 정리 시작
+              <ListChecks size={22} aria-hidden /> 약장 정리 시작
             </button>
           )}
 
-          <p className="section-title">다가오는 일정</p>
+          <p className="section-title">다가오는 진료/처방 일정</p>
           {appts.length ? (
             appts.slice(0, 2).map((a) => (
               <button key={a.memberId + a.date} className="card appt" onClick={() => nav.tab('schedule')}>

@@ -48,6 +48,25 @@ export function addSampleHousehold(d0: AppData): AppData {
     }
     d = saveMedicine(d, hid, { ...input, locationName })
   }
+  // 영양제·의료용품 예시 (제품 표시 내용만 기록, 섭취량 판단 없음)
+  type ItemRow = [string, 'SUPPLEMENT' | 'MEDICAL_SUPPLY', string, string, string | null, string | null, string | null, string?, string?]
+  // 이름, 유형, 분류, 위치, 가족, 기한, 수량, 주요 성분, 섭취방법(제품 표시)
+  const items: ItemRow[] = [
+    ['샘플 종합비타민', 'SUPPLEMENT', 's01', '주방 상부장', mom, addMonthsYm(14), '60정', '비타민 B군, 비타민 C, 아연', '1일 1회 1정 (제품 표시)'],
+    ['샘플 비타민D', 'SUPPLEMENT', 's01', '주방 상부장', dad, addDays(40), '90정', '비타민D', '1일 1정 (제품 표시)'],
+    ['샘플 오메가3', 'SUPPLEMENT', 's02', '냉장고', dad, addMonthsYm(9), '30캡슐', 'EPA 및 DHA 함유 유지', undefined],
+    ['샘플 유산균', 'SUPPLEMENT', 's03', '냉장고', mom, addDays(-15), '30포', '프로바이오틱스', undefined],
+    ['샘플 루테인', 'SUPPLEMENT', 's04', '안방 첫 번째 서랍', mom, addMonthsYm(20), '60캡슐', '마리골드꽃추출물(루테인)', undefined],
+    ['샘플 전자체온계', 'MEDICAL_SUPPLY', 'm01', '거실 약바구니', shared, null, '1개'],
+    ['샘플 멸균거즈', 'MEDICAL_SUPPLY', 'm04', '거실 약바구니', shared, addMonthsYm(30), '10매'],
+  ]
+  for (const [name, productType, categoryId, locationName, familyMemberId, expirationDate, quantity, ingredients, intakeLabel] of items) {
+    d = saveMedicine(d, hid, {
+      name, productType, categoryId, locationName, familyMemberId, expirationDate, quantity,
+      isPrescription: false, nextAppointmentDate: null, photo: null, memo: null, sessionId: null, product: { source: 'manual' },
+      supplement: productType === 'SUPPLEMENT' ? { ingredients, intakeLabel } : undefined,
+    })
+  }
   // 수납 방식 예시
   d = { ...d, storageLocations: d.storageLocations.map((l) => (l.householdId === hid && l.name.startsWith('12칸') ? { ...l, storageType: '12칸 서랍' as const } : l)) }
   return d

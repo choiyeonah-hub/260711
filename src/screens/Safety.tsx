@@ -3,7 +3,12 @@ import { useHousehold, useStore } from '../data/store'
 import { addQuestion, deleteQuestion, setPreparedness, toggleQuestion } from '../data/actions'
 import { IDENTIFICATION_LABEL, identificationOf, ingredientsOf } from '../data/medicineMeta'
 import { EXPIRY_LABEL, expiryStatus, formatExp } from '../lib/dates'
-import { LEVEL_META, TYPE_ICON, officialLabelUrl, safetyInfo } from '../services/safety'
+import { LEVEL_META, officialLabelUrl, safetyInfo } from '../services/safety'
+import { LevelIcon, SafetyTypeIcon } from '../components/safetyIcons'
+import { CategoryIcon } from '../components/icons'
+import { Check, ChevronRight, ClipboardList, ClipboardPlus, ExternalLink, MapPin, Printer, Share2 } from 'lucide-react'
+import { PRODUCT_TYPE_LABEL } from '../types'
+import { isMedicine, productTypeOf } from '../data/medicineMeta'
 import { PREPAREDNESS_ITEMS, PREP_LABEL, preparednessStatus } from '../services/preparedness'
 import type { Medicine, SafetyFinding, SafetyInformation, SafetyLevel } from '../types'
 import { useNav } from '../nav'
@@ -19,7 +24,7 @@ export function MedicineDetail({ id }: { id: string }) {
   const { data } = useStore()
   const { categories, locations, members } = useHousehold()
   const m = data.medicines.find((x) => x.id === id)
-  if (!m) return <div className="screen"><Header title="약 정보" back /><Empty>삭제된 약입니다.</Empty></div>
+  if (!m) return <div className="screen"><Header title="상세 정보" back /><Empty>삭제된 품목입니다.</Empty></div>
 
   const cat = categories.find((c) => c.id === m.categoryId)
   const loc = locations.find((l) => l.id === m.storageLocationId)
@@ -28,28 +33,38 @@ export function MedicineDetail({ id }: { id: string }) {
   const infos = safetyInfo.getForMedicine(m)
   const idStatus = identificationOf(m)
   const p = m.product
+  const type = productTypeOf(m)
+  const isMed = type === 'MEDICINE'
 
   return (
     <div className="screen">
-      <Header title="약 정보" back right={<button className="chip" onClick={() => nav.push({ name: 'edit', id: m.id })}>수정</button>} />
+      <Header title={isMed ? '약 정보' : '품목 정보'} back right={<button className="chip" onClick={() => nav.push({ name: 'edit', id: m.id })}>수정</button>} />
       <div className="card detail-head">
         {m.photo && <img src={m.photo} alt="" className="detail-photo" />}
         <div className="med-name big">{m.name}{m.isPrescription && <span className="tag tag-rx">처방</span>}</div>
-        <div className="med-loc">📍 {loc?.name ?? '-'}</div>
+        <div className="med-loc"><MapPin size={16} aria-hidden />{loc?.name ?? '-'}</div>
         <dl className="kv">
-          <dt>분류</dt><dd>{cat?.icon} {cat?.name}</dd>
+          <dt>품목 종류</dt><dd>{PRODUCT_TYPE_LABEL[type]}</dd>
+          <dt>분류</dt><dd className="with-icon"><CategoryIcon id={cat?.id} size={18} />{cat?.name}</dd>
           <dt>가족</dt><dd>{member?.name ?? '-'}</dd>
-          <dt>유효기간</dt><dd>{m.expirationDate ? `${formatExp(m.expirationDate)} · ${EXPIRY_LABEL[st]}` : '미입력'}</dd>
+          <dt>{type === 'SUPPLEMENT' ? '소비기한/유통기한' : '유효기간'}</dt><dd>{m.expirationDate ? `${formatExp(m.expirationDate)} · ${EXPIRY_LABEL[st]}` : '미입력'}</dd>
           {m.isPrescription && <><dt>다음 진료/처방 예정일</dt><dd>{m.nextAppointmentDate ? formatExp(m.nextAppointmentDate) : '미입력'}</dd></>}
           {p?.manufacturer && <><dt>제조사</dt><dd>{p.manufacturer}</dd></>}
           {(p?.strength || p?.dosageForm) && <><dt>함량·제형</dt><dd>{[p.strength, p.dosageForm].filter(Boolean).join(' · ')}</dd></>}
           {ingredientsOf(m).length > 0 && <><dt>성분</dt><dd>{ingredientsOf(m).join(', ')}</dd></>}
-          <dt>제품 식별</dt><dd className={idStatus === 'UNVERIFIED' ? 'warn-text' : ''}>{IDENTIFICATION_LABEL[idStatus]}</dd>
+          {m.supplement?.ingredients && <><dt>주요 성분</dt><dd>{m.supplement.ingredients}</dd></>}
+          {m.supplement?.intakeLabel && <><dt>섭취방법 (제품 표시)</dt><dd>{m.supplement.intakeLabel}</dd></>}
+          {m.quantity && <><dt>수량</dt><dd>{m.quantity}</dd></>}
+          {m.memo && <><dt>메모</dt><dd>{m.memo}</dd></>}
+          {isMed && <><dt>제품 식별</dt><dd className={idStatus === 'UNVERIFIED' ? 'warn-text' : ''}>{IDENTIFICATION_LABEL[idStatus]}</dd></>}
         </dl>
         <ExpiryBadge status={st} />
       </div>
 
-      <h2 className="section-h">💊 이 약을 드실 때 알아두세요</h2>
+      {!isMed ? (
+        <NonMedicineNote m={m} />
+      ) : <>
+      <h2 className="section-h">이 약을 드실 때 알아두세요</h2>
       {idStatus === 'UNVERIFIED' ? (
         <div className="card">
           <p>제품이 확인되지 않아 공식 안전정보를 연결할 수 없습니다.</p>
@@ -64,7 +79,7 @@ export function MedicineDetail({ id }: { id: string }) {
             if (!list.length) return null
             return (
               <section key={lv} className={`safety-group lv-${lv}`}>
-                <p className="safety-group-title">{LEVEL_META[lv].icon} {LEVEL_META[lv].label}</p>
+                <p className="safety-group-title"><LevelIcon level={lv} size={20} /> {LEVEL_META[lv].label}</p>
                 {list.map((info) => (
                   <SafetyCard key={info.id} info={info} meds={[m]} refKey={`${info.id}|${m.id}`} />
                 ))}
@@ -72,10 +87,11 @@ export function MedicineDetail({ id }: { id: string }) {
             )
           })}
           <a className="btn btn-outline full" href={officialLabelUrl(m.name)} target="_blank" rel="noreferrer">
-            📄 식약처 공식 허가정보 · 이 제품의 허가된 용법·용량 보기
+            식약처 공식 허가정보 · 허가된 용법·용량 보기 <ExternalLink size={18} aria-hidden />
           </a>
         </>
       )}
+      </>}
       <p className="muted small pad">{SAFETY_NOTE}</p>
     </div>
   )
@@ -89,7 +105,7 @@ function SafetyCard({ info, meds, refKey, summary }: { info: SafetyInformation; 
   const added = data.pharmacistQuestions.some((q) => q.householdId === household?.id && q.refKey === refKey)
   return (
     <div className={`card safety-card lv-${info.level}`}>
-      <div className="safety-title">{TYPE_ICON[info.type] ?? LEVEL_META[info.level].icon} {info.title}</div>
+      <div className="safety-title"><SafetyTypeIcon info={info} size={20} /> {info.title}</div>
       {summary && <p>{summary}</p>}
       {open && (
         <div className="official">
@@ -110,7 +126,7 @@ function SafetyCard({ info, meds, refKey, summary }: { info: SafetyInformation; 
             refKey,
           }))}
         >
-          {added ? '✓ 확인 목록에 있음' : '📝 약사에게 확인할 목록에 추가'}
+          {added ? <><Check size={18} aria-hidden /> 확인 목록에 있음</> : <><ClipboardPlus size={18} aria-hidden /> 약사에게 확인하기</>}
         </button>
       </div>
     </div>
@@ -120,7 +136,8 @@ function SafetyCard({ info, meds, refKey, summary }: { info: SafetyInformation; 
 // ---------------- 우리집 약장 안전확인 ----------------
 export function SafetyCheck() {
   const nav = useNav()
-  const { medicines } = useHousehold()
+  const { medicines: items } = useHousehold()
+  const medicines = items.filter(isMedicine)
   const { findings, excluded } = safetyInfo.checkInventory(medicines)
   const [level, setLevel] = useState<SafetyLevel | null>(null)
   const count = (lv: SafetyLevel) => findings.filter((f) => f.info.level === lv).length
@@ -135,7 +152,7 @@ export function SafetyCheck() {
         <div className="level-row">
           {LEVELS.map((lv) => (
             <button key={lv} className={`level-pill lv-${lv} ${level === lv ? 'on' : ''}`} onClick={() => setLevel(level === lv ? null : lv)}>
-              {LEVEL_META[lv].icon} {LEVEL_META[lv].short} <b>{count(lv)}건</b>
+              <span className="with-icon"><LevelIcon level={lv} size={20} />{LEVEL_META[lv].short}</span> <b>{count(lv)}건</b>
             </button>
           ))}
         </div>
@@ -149,7 +166,8 @@ export function SafetyCheck() {
           {excluded.map((m) => <MedicineCard key={m.id} m={m} />)}
         </>
       )}
-      <button className="btn btn-outline full" onClick={() => nav.push({ name: 'questions' })}>📝 약사에게 확인할 목록 보기</button>
+      <p className="muted small pad">영양제·의료용품은 공식 안전정보 비교 대상이 아닙니다.</p>
+      <button className="btn btn-outline full" onClick={() => nav.push({ name: 'questions' })}><ClipboardList size={20} aria-hidden /> 약사에게 확인할 목록 보기</button>
       <p className="muted small pad">{SAFETY_NOTE}</p>
     </div>
   )
@@ -162,7 +180,7 @@ function FindingCard({ f, meds }: { f: SafetyFinding; meds: Medicine[] }) {
     : '공식 안전정보에 이 의약품 관련 항목이 있습니다.'
   return (
     <div className="finding">
-      <p className="safety-group-title">{LEVEL_META[f.info.level].icon} {LEVEL_META[f.info.level].label}</p>
+      <p className="safety-group-title"><LevelIcon level={f.info.level} size={20} /> {LEVEL_META[f.info.level].label}</p>
       <div className="finding-meds">
         {meds.map((m) => (
           <button key={m.id} className="chip" onClick={() => nav.push({ name: 'detail', id: m.id })}>{m.name}</button>
@@ -218,8 +236,8 @@ export function PharmacistList() {
       </div>
       {list.length > 0 && (
         <div className="row-2 no-print" style={{ marginTop: 12 }}>
-          <button className="btn btn-outline" onClick={() => window.print()}>🖨️ 인쇄/PDF</button>
-          <button className="btn btn-primary" onClick={share}>📤 공유</button>
+          <button className="btn btn-outline" onClick={() => window.print()}><Printer size={20} aria-hidden /> 인쇄/PDF</button>
+          <button className="btn btn-primary" onClick={share}><Share2 size={20} aria-hidden /> 공유</button>
         </div>
       )}
     </div>
@@ -247,7 +265,7 @@ export function Preparedness() {
               <span className={`prep-status st-${status}`}>{PREP_LABEL[status]}</span>
             </div>
             {item.categoryIds && status !== 'MISSING' && (
-              <button className="link-btn" onClick={() => nav.push({ name: 'list', title: item.name, filter: { categoryId: item.categoryIds![0] } })}>등록된 약 보기 ›</button>
+              <button className="link-btn" onClick={() => nav.push({ name: 'list', title: item.name, filter: { categoryId: item.categoryIds![0] } })}>등록된 품목 보기 <ChevronRight size={18} aria-hidden /></button>
             )}
             {!item.categoryIds && (
               <div className="chips">
@@ -266,12 +284,35 @@ export function Preparedness() {
                 medicineIds: [],
                 refKey,
               }))}>
-                {added ? '✓ 상담 목록에 있음' : '📝 약사에게 상담할 목록에 추가'}
+                {added ? <><Check size={18} aria-hidden /> 상담 목록에 있음</> : <><ClipboardPlus size={18} aria-hidden /> 약사에게 상담할 목록에 추가</>}
               </button>
             )}
           </div>
         )
       })}
+    </div>
+  )
+}
+
+// 영양제·의료용품: 공식 안전정보 비교 대상이 아님 (상호작용 정보를 임의로 만들지 않는다)
+function NonMedicineNote({ m }: { m: Medicine }) {
+  const { data, update } = useStore()
+  const { household } = useHousehold()
+  if (productTypeOf(m) !== 'SUPPLEMENT') return null
+  const refKey = `supp:${m.id}`
+  const added = data.pharmacistQuestions.some((q) => q.householdId === household?.id && q.refKey === refKey)
+  return (
+    <div className="card note-card">
+      <p>영양제와 의약품을 함께 드실 때의 정보는 아직 제공하지 않습니다. 복용 중인 약이 있다면 약사에게 확인하세요.</p>
+      <button
+        className="btn btn-outline full"
+        disabled={added}
+        onClick={() => household && update((d) => addQuestion(d, {
+          householdId: household.id, title: m.name, detail: '복용 중인 약과 함께 섭취해도 되는지 확인', medicineIds: [m.id], refKey,
+        }))}
+      >
+        {added ? <><Check size={18} aria-hidden /> 확인 목록에 있음</> : <><ClipboardPlus size={18} aria-hidden /> 약사에게 확인하기</>}
+      </button>
     </div>
   )
 }

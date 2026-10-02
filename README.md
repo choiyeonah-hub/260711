@@ -30,6 +30,14 @@ npm run build && npm run preview -- --host   # 배포본과 동일하게 확인
 
 ## 구현된 기능
 
+- **품목 유형 3종**: 의약품(MEDICINE) / 영양제·건강기능식품(SUPPLEMENT) / 의료용품(MEDICAL_SUPPLY)
+  - 등록 첫 단계 "무엇을 등록할까요?"에서 선택. 의약품은 기존 사진 등록 흐름, 영양제·의료용품은 같은 폼 + 사진으로 제품명·기한 읽기(확인 후 적용)
+  - 영양제: 주요 성분, 섭취방법·1일 섭취량(제품 표시 그대로), 소비기한/유통기한. 분류는 의약품 12분류와 별도(비타민·미네랄/오메가3/유산균/눈 건강/관절·뼈/기타)
+  - 의료용품: 체온계/밴드/드레싱/거즈/테이프/기타
+  - 공식 안전정보 비교(안전확인)는 의약품만 대상. 영양제–의약품 상호작용은 구현하지 않음(검증된 데이터 확보 후 `SafetyInformation.scope`로 확장)
+  - 홈: 유형이 2개 이상이면 "등록 품목 N" + "의약품 · 영양제 · 의료용품" 개수 / 약장: [전체·의약품·영양제·의료용품] 필터
+  - 기존 데이터: productType 구값(PRESCRIPTION/OTC/HEALTH_SUPPLEMENT)을 자동 변환, 기존 의약품은 MEDICINE (백업 JSON 가져오기도 동일)
+
 - 홈: 총 의약품 / 유효기간 임박(90일 이내) / 만료, 다가오는 진료·처방 일정(D-day), 가족별 약장 요약, 큰 검색창(이름·분류·위치·가족)
 - **사진으로 약 등록 (기본)**: 촬영 → 글자 인식 → 제품 후보 선택 → 유효기간 "맞아요/수정" 확인 → 추천 분류 확인·위치 → **저장 후 📷 다음 약 촬영**(카메라 바로 열림)
   - 못 찾으면: 다시 촬영 / 제품명 검색 / 직접 입력. 유효기간 못 찾으면: 유효기간 부분만 다시 찍기 / 직접 입력 / 표시 없음
@@ -90,6 +98,12 @@ npm run build && npm run preview -- --host   # 배포본과 동일하게 확인
 - 안전정보 비교 대상: `identificationStatus`가 `USER_CONFIRMED`/`OFFICIAL_DB_MATCHED`인 약만 (제품 DB에서 고르면 확인됨, 이름만 입력하면 미확인)
 - `productType`(처방약/일반약/의료용품/건강기능식품)은 저장 시 자동 결정, 건강기능식품은 데이터 구조만 준비
 
+## 디자인 원칙
+
+- 아이콘: lucide-react outline 한 세트만 사용(이모지 없음), 카테고리 아이콘은 `src/components/icons.tsx`에서 id로 매핑
+- 색: primary green 한 계열 / red는 만료·중요 안전정보 전용 / amber는 임박·주의 / 그 외 neutral gray (`src/index.css` 토큰)
+- 본문 17px, 버튼·터치 영역 44px 이상, 카드 border 1px·그림자 최소
+
 ## 구조
 
 - `src/types.ts` — Household, FamilyMember, Category, StorageLocation, Medicine, OrganizationSession, Survey, Reminder
@@ -106,7 +120,7 @@ npm run build && npm run preview -- --host   # 배포본과 동일하게 확인
 - OS 푸시 알림 없음(앱 내부 알림만)
 - 식약처 의약품 DB 검색 미연결 (mock DB 43개, 시연용 가상 제품 3개 포함)
 - 식약처 허가정보·DUR 미연결 → 안전정보는 전부 예시 데이터
-- 카테고리 편집 UI 없음, 건강기능식품 등록 UI 없음(데이터 구조만)
+- 카테고리 편집 UI 없음(데이터 구조는 수정 가능)
 - 바코드(표준코드) 인식 없음
 - 카테고리 이름/순서 수정 UI 없음(데이터 구조는 수정 가능)
 - 로그인/권한 없음

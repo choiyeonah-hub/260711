@@ -11,14 +11,11 @@ export function identificationOf(m: Medicine): IdentificationStatus {
 }
 
 // 안전정보 자동 비교 대상: 사용자가 제품을 확인한 약만
-export const isIdentified = (m: Medicine) => identificationOf(m) !== 'UNVERIFIED'
+export const isIdentified = (m: Medicine) => isMedicine(m) && identificationOf(m) !== 'UNVERIFIED'
 
-export function productTypeOf(m: Pick<Medicine, 'productType' | 'isPrescription' | 'categoryId' | 'product'>): ProductType {
-  if (m.productType) return m.productType
-  if (m.isPrescription) return 'PRESCRIPTION_MEDICINE'
-  if (m.categoryId === 'c07' || m.categoryId === 'c08') return 'MEDICAL_SUPPLY'
-  return 'OTC_MEDICINE'
-}
+// normalizeData 를 거친 데이터는 항상 값이 있음. 없으면 의약품.
+export const productTypeOf = (m: Pick<Medicine, 'productType'>): ProductType => m.productType ?? 'MEDICINE'
+export const isMedicine = (m: Pick<Medicine, 'productType'>) => productTypeOf(m) === 'MEDICINE'
 
 export function splitIngredients(s?: string): string[] {
   return s ? s.split('+').map((x) => x.trim()).filter(Boolean) : []

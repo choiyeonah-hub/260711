@@ -1,3 +1,4 @@
+import { Check, CircleCheck } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useHousehold, useStore } from '../data/store'
 import { activeSession, addSurvey, bumpDiscarded, endSession, setPhaseMinutes, startSession } from '../data/actions'
@@ -78,7 +79,7 @@ export function SessionBar() {
   return (
     <div className="session-bar">
       <div className="session-info" onClick={() => setEditing(!editing)}>
-        🧹 정리 중 · {mins}분 · <b>{count}개</b> 등록 · 폐기 {s.discardedExpiredCount}
+        <span className="live-dot" aria-hidden />정리 중 · {mins}분 · <b>{count}개</b> 등록 · 폐기 {s.discardedExpiredCount}
       </div>
       <button className="chip small-chip" onClick={() => setEditing(!editing)}>{editing ? '닫기' : '더보기'}</button>
       <button className="chip small-chip end" onClick={finish}>정리 완료</button>
@@ -145,7 +146,7 @@ function PhaseTimes({ sessionId, total, initial }: { sessionId: string; total: n
       </div>
       <p className={`small ${sum > total ? 'warn-text' : 'muted'}`}>입력 합계 {sum}분 / 총 작업시간 {total}분</p>
       <button className="btn btn-outline full" onClick={() => { update((d) => setPhaseMinutes(d, sessionId, v)); setSaved(true) }}>
-        {saved ? '✓ 저장됨' : '단계별 시간 저장'}
+        {saved ? <><Check size={18} aria-hidden /> 저장됨</> : '단계별 시간 저장'}
       </button>
     </details>
   )
@@ -162,10 +163,10 @@ export function SessionSummary({ id }: { id: string }) {
     <div className="screen">
       <Header title="정리 완료" />
       <div className="card done">
-        <div className="done-icon">✅</div>
+        <div className="done-icon"><CircleCheck size={44} strokeWidth={1.75} aria-hidden /></div>
         <h2>오늘 약장 정리가 완료되었습니다.</h2>
         <dl className="summary">
-          <dt>총 의약품</dt><dd>{sum.householdTotal}개</dd>
+          <dt>등록 품목</dt><dd>{sum.householdTotal}개</dd>
           <dt>처방약 / 상비약</dt><dd>{sum.prescriptionTotal ?? sum.prescriptionCount}개 / {sum.otcCount ?? '-'}개</dd>
           <dt>만료 발견</dt><dd className={sum.expiredFound ? 'danger-text' : ''}>{sum.expiredFound}개</dd>
           <dt>3개월 이내 만료</dt><dd>{sum.expiringSoonCount ?? '-'}개</dd>

@@ -1,5 +1,5 @@
 import type { AppData, FamilyMember, Household, Medicine, OrganizationSession, PharmacistQuestion, StorageType, Survey, WorkPhase } from '../types'
-import { identificationOf, isIdentified, productTypeOf } from './medicineMeta'
+import { identificationOf, isIdentified, isMedicine, productTypeOf } from './medicineMeta'
 import { expiryStatus, isSoon } from '../lib/dates'
 import { makeShareCode, uid } from './defaults'
 
@@ -72,7 +72,7 @@ export function saveMedicine(d: AppData, householdId: string, input: MedicineInp
   const rest = {
     ...fields,
     identificationStatus: identificationOf({ ...fields, identificationStatus: undefined } as Medicine),
-    productType: productTypeOf({ ...fields, productType: undefined }),
+    productType: productTypeOf(fields),
   }
   const [d2, storageLocationId] = ensureLocation(d, householdId, locationName)
   if (id) {
@@ -140,8 +140,9 @@ export function endSession(d: AppData, sessionId: string): AppData {
       const regs = d.medicines.filter((m) => m.sessionId === s.id)
       const all = d.medicines.filter((m) => m.householdId === s.householdId)
       const persons = new Set(d.familyMembers.filter((f) => f.householdId === s.householdId && !f.isShared).map((f) => f.id))
-      const rx = all.filter((m) => m.isPrescription)
-      const unidentified = all.filter((m) => !isIdentified(m))
+      const meds = all.filter(isMedicine) // 처방/상비·식별 집계는 의약품만
+      const rx = meds.filter((m) => m.isPrescription)
+      const unidentified = meds.filter((m) => !isIdentified(m))
       const ownerUnknown = rx.filter((m) => !m.familyMemberId || !persons.has(m.familyMemberId))
       const useUnknown = rx.filter((m) => (m.currentUseStatus ?? 'UNKNOWN') === 'UNKNOWN')
       const review = new Set([...unidentified, ...ownerUnknown, ...useUnknown].map((m) => m.id))
@@ -159,7 +160,7 @@ export function endSession(d: AppData, sessionId: string): AppData {
           recognitionSuccessRate: s.photoEntryCount ? Math.round(((s.recognitionSuccessCount ?? 0) / s.photoEntryCount) * 100) : null,
           recognitionSuccessCount: s.recognitionSuccessCount ?? 0,
           prescriptionTotal: rx.length,
-          otcCount: all.length - rx.length,
+          otcCount: meds.length - rx.length,
           expiringSoonCount: all.filter((m) => isSoon(expiryStatus(m.expirationDate))).length,
           unidentifiedCount: unidentified.length,
           rxOwnerUnknownCount: ownerUnknown.length,

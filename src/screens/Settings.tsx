@@ -1,3 +1,4 @@
+import { CircleCheck, Download, House, Upload } from 'lucide-react'
 import { useState } from 'react'
 import { useHousehold, useStore } from '../data/store'
 import { addFamilyMember, createHousehold, deleteFamilyMember, deleteHousehold, renameFamilyMember, updateHousehold } from '../data/actions'
@@ -53,7 +54,7 @@ export function Settings() {
       {data.households.map((h) => (
         <div key={h.id} className={`card row-card ${h.id === household?.id ? 'selected' : ''}`}>
           <button className="grow left" onClick={() => update((d) => ({ ...d, currentHouseholdId: h.id }))}>
-            {h.id === household?.id ? '✅' : '🏠'} {h.name}
+            <span className="with-icon">{h.id === household?.id ? <CircleCheck size={20} className="primary-text" aria-hidden /> : <House size={20} className="muted" aria-hidden />}{h.name}</span>
           </button>
           {h.id === household?.id && (
             <button className="chip" onClick={() => { const n = prompt('가정 이름', h.name); if (n?.trim()) update((d) => updateHousehold(d, h.id, { name: n.trim() })) }}>이름 변경</button>
@@ -95,9 +96,9 @@ export function Settings() {
 
       <p className="section-title">데이터</p>
       <div className="card stack">
-        <button className="btn btn-outline" onClick={exportJson}>⬇️ 데이터 백업 내보내기 (JSON)</button>
+        <button className="btn btn-outline" onClick={exportJson}><Download size={20} aria-hidden /> 데이터 백업 내보내기 (JSON)</button>
         <label className="btn btn-outline">
-          ⬆️ 백업 파일 가져오기
+          <Upload size={20} aria-hidden /> 백업 파일 가져오기
           <input type="file" accept="application/json,.json" hidden onChange={(e) => importJson(e.target.files?.[0])} />
         </label>
         {hasSample ? (
@@ -135,7 +136,7 @@ function SessionHistory() {
       ))}
       {surveys.map((v) => (
         <div key={v.id} className="history">
-          📝 설문 {new Date(v.createdAt).toLocaleDateString('ko-KR')} · 추천 {v.recommendScore ?? '-'}점 · {v.price || '-'} · 재점검 {v.revisitIntent || '-'}
+          설문 {new Date(v.createdAt).toLocaleDateString('ko-KR')} · 추천 {v.recommendScore ?? '-'}점 · {v.price || '-'} · 재점검 {v.revisitIntent || '-'}
           <div className="muted small">{[v.mostUseful === '기타' ? v.mostUsefulOther : v.mostUseful, v.knewApps && `앱 인지: ${v.knewApps}`, v.selfRegister && `직접 등록: ${v.selfRegister}`, v.expertFirst && `전문가 첫 정리: ${v.expertFirst}`, v.feedback].filter(Boolean).join(' / ')}</div>
         </div>
       ))}

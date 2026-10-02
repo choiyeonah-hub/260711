@@ -1,5 +1,5 @@
 import type { Medicine, SafetyFinding, SafetyInformation, SafetyLevel } from '../../types'
-import { ingredientsOf, isIdentified } from '../../data/medicineMeta'
+import { ingredientsOf, isIdentified, isMedicine } from '../../data/medicineMeta'
 import { BY_INGREDIENT, BY_PRODUCT, COMBINATIONS, DUPLICATION_GROUPS } from './mockSafetyData'
 
 // 공식 의약품 안전정보 서비스.
@@ -29,8 +29,9 @@ class MockSafetyInfoService implements SafetyInfoService {
   }
 
   checkInventory(meds: Medicine[]) {
+    // 의약품만 대상. 영양제·의료용품은 공식 안전정보 비교 대상이 아님
     const included = meds.filter(isIdentified)
-    const excluded = meds.filter((m) => !isIdentified(m))
+    const excluded = meds.filter((m) => isMedicine(m) && !isIdentified(m))
     const findings: SafetyFinding[] = []
 
     // 1) 약별 정보
@@ -62,15 +63,10 @@ class MockSafetyInfoService implements SafetyInfoService {
 
 export const safetyInfo: SafetyInfoService = new MockSafetyInfoService()
 
-export const LEVEL_META: Record<SafetyLevel, { icon: string; label: string; short: string }> = {
-  CRITICAL: { icon: '🔴', label: '중요 안전정보', short: '꼭 확인' },
-  CAUTION: { icon: '🟡', label: '생활 속 주의사항', short: '주의정보' },
-  INFO: { icon: '🔵', label: '알아두면 좋은 정보', short: '알아두면 좋은 정보' },
-}
-
-export const TYPE_ICON: Partial<Record<SafetyInformation['type'], string>> = {
-  FOOD_DRINK: '🍊', ADMINISTRATION: '⏰', DAILY_LIFE: '🚗', BODY_CHANGE: '💧', THERAPEUTIC_DUPLICATION: '🔁',
-  COMBINATION_CONTRAINDICATION: '⚠️', SPLIT_CAUTION: '✂️', ELDERLY_CAUTION: '👵', DOSE_CAUTION: '📏',
+export const LEVEL_META: Record<SafetyLevel, { label: string; short: string }> = {
+  CRITICAL: { label: '중요 안전정보', short: '꼭 확인' },
+  CAUTION: { label: '생활 속 주의사항', short: '주의정보' },
+  INFO: { label: '알아두면 좋은 정보', short: '알아두면 좋은 정보' },
 }
 
 // 공식 허가정보 확인 링크 (용법·용량은 앱이 해석하지 않고 원문으로 안내)

@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { Camera, Check, Pin, ScanLine } from 'lucide-react'
+import { CategoryIcon } from '../components/icons'
+import { recognize } from '../services/ocr'
 import { useHousehold, useStore } from '../data/store'
 import { activeSession, deleteMedicine, recordEntry, saveMedicine, type EntryMethod } from '../data/actions'
 import { EXPIRY_LABEL, expiryStatus, formatExp, parseExpiryInput } from '../lib/dates'
@@ -8,8 +11,8 @@ import { searchProducts } from '../services/drugDb'
 import { medicineSearch } from '../services/medicineSearch'
 import { suggestCategory } from '../services/categoryMapper'
 import type { ProductRecord } from '../services/mockMedicineDb'
-import type { CurrentUseStatus, Medicine } from '../types'
-import { splitIngredients } from '../data/medicineMeta'
+import type { CurrentUseStatus, Medicine, ProductType } from '../types'
+import { productTypeOf, splitIngredients } from '../data/medicineMeta'
 import { useNav } from '../nav'
 import { Header } from '../components/ui'
 
@@ -38,15 +41,26 @@ interface Props {
   prefill?: Prefill
   entry?: EntryMethod
   top?: ReactNode // 폼 위에 표시할 내용 (사진 인식 확인 결과 등)
-  onSaveNextPhoto?: () => void // 있으면 '저장 후 📷 다음 약 촬영' 버튼
+  onSaveNextPhoto?: () => void // 있으면 '저장하고 다음 약 촬영' 버튼
   onBack?: () => void
+  productType?: ProductType // 새 품목 등록 시 유형 (기본 의약품)
 }
 
-export function MedicineForm({ id, prefill, entry = { method: 'manual' }, top, onSaveNextPhoto, onBack }: Props) {
+const TEXT: Record<ProductType, { title: string; name: string; exp: string; next: string }> = {
+  MEDICINE: { title: '약 등록', name: '약 이름 (포장에 적힌 그대로)', exp: '유효기간', next: '저장 후 다음 약' },
+  SUPPLEMENT: { title: '영양제 등록', name: '제품명 (포장에 적힌 그대로)', exp: '소비기한/유통기한', next: '저장 후 다음 품목' },
+  MEDICAL_SUPPLY: { title: '의료용품 등록', name: '제품명 (예: 전자체온계, 멸균거즈)', exp: '유효기간 (표시된 경우)', next: '저장 후 다음 품목' },
+}
+
+export function MedicineForm({ id, prefill, entry: entryProp = { method: 'manual' }, top, onSaveNextPhoto, onBack, productType }: Props) {
   const nav = useNav()
   const { data, update } = useStore()
-  const { household, members, locations, categories, medicines } = useHousehold()
+  const { household, members, locations, categoriesOf, medicines } = useHousehold()
   const editing = id ? data.medicines.find((m) => m.id === id) : undefined
+  const type: ProductType = editing ? productTypeOf(editing) : (productType ?? 'MEDICINE')
+  const isMed = type === 'MEDICINE'
+  const categories = categoriesOf(type)
+  const keptCategory = last.keepCategory && categories.some((c) => c.id === last.categoryId) ? last.categoryId : ''
   const session = activeSession(data, household?.id ?? null)
   const nameRef = useRef<HTMLInputElement>(null)
 
@@ -64,19 +78,23 @@ export function MedicineForm({ id, prefill, entry = { method: 'manual' }, top, o
           nextAppointmentDate: editing.nextAppointmentDate ?? '',
           currentUseStatus: editing.currentUseStatus ?? 'UNKNOWN',
           photo: editing.photo,
+          supIngredients: editing.supplement?.ingredients ?? '',
+          supIntake: editing.supplement?.intakeLabel ?? '',
         }
       : {
           name: prefill?.name ?? '',
-          categoryId: prefill?.categoryId ?? (last.keepCategory ? last.categoryId : ''),
+          categoryId: prefill?.categoryId ?? keptCategory,
           locationName: last.keepLocation ? last.locationName : '',
           familyMemberId: last.keepFamily ? last.familyMemberId : null,
           expInput: prefill?.expInput ?? '',
           quantity: '',
           memo: '',
-          isPrescription: last.keepFamily ? last.isPrescription : false,
-          nextAppointmentDate: last.keepFamily ? last.nextAppointmentDate : '',
+          isPrescription: isMed && last.keepFamily ? last.isPrescription : false,
+          nextAppointmentDate: isMed && last.keepFamily ? last.nextAppointmentDate : '',
           currentUseStatus: 'UNKNOWN' as CurrentUseStatus,
           photo: (prefill?.photo ?? null) as string | null,
+          supIngredients: '',
+          supIntake: '',
         }
 
   const [f, setF] = useState(init)
@@ -88,10 +106,11 @@ export function MedicineForm({ id, prefill, entry = { method: 'manual' }, top, o
   const [dbHits, setDbHits] = useState<ProductRecord[]>([])
   useEffect(() => {
     let alive = true
-    if (f.name.trim().length < 2) { setDbHits([]); return }
+    if (!isMed || f.name.trim().length < 2) { setDbHits([]); return }
     medicineSearch.search(f.name, 4).then((r) => alive && setDbHits(r.filter((p) => p.name !== f.name)))
     return () => { alive = false }
-  }, [f.name])
+  }, [f.name, isMed])
+  const [ocrUsed, setOcrUsed] = useState<{ nameApplied: boolean; engine?: string } | null>(null)
   const [suggestedCat, setSuggestedCat] = useState(prefill?.categoryId ?? '')
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((p) => ({ ...p, [k]: v }))
 
@@ -131,9 +150,13 @@ export function MedicineForm({ id, prefill, entry = { method: 'manual' }, top, o
           expirationDate: expParsed,
           quantity: f.quantity.trim() || null,
           memo: f.memo.trim() || null,
-          isPrescription: f.isPrescription,
-          nextAppointmentDate: f.isPrescription && f.nextAppointmentDate ? f.nextAppointmentDate : null,
-          currentUseStatus: f.isPrescription ? f.currentUseStatus : undefined,
+          isPrescription: isMed && f.isPrescription,
+          nextAppointmentDate: isMed && f.isPrescription && f.nextAppointmentDate ? f.nextAppointmentDate : null,
+          currentUseStatus: isMed && f.isPrescription ? f.currentUseStatus : undefined,
+          productType: type,
+          supplement: type === 'SUPPLEMENT'
+            ? { ingredients: f.supIngredients.trim() || undefined, intakeLabel: f.supIntake.trim() || undefined }
+            : undefined,
           photo: f.photo,
           product,
           sessionId: editing ? (editing.sessionId ?? null) : (session?.id ?? null),
@@ -142,6 +165,8 @@ export function MedicineForm({ id, prefill, entry = { method: 'manual' }, top, o
       ),
     )
     if (editing) return (onBack ?? nav.back)()
+    // 영양제·의료용품에서 사진 읽기를 썼다면 사진 등록으로 집계
+    const entry: EntryMethod = ocrUsed ? { method: 'photo', recognized: ocrUsed.nameApplied, engine: ocrUsed.engine } : entryProp
     if (session) update((d) => recordEntry(d, session.id, entry))
     Object.assign(last, {
       keepFamily: keep.family, keepLocation: keep.location, keepCategory: keep.category,
@@ -155,6 +180,7 @@ export function MedicineForm({ id, prefill, entry = { method: 'manual' }, top, o
     setTimeout(() => setToast(''), 2500)
     setF(init())
     setProduct({ source: 'manual' })
+    setOcrUsed(null)
     setErrors([])
     window.scrollTo({ top: 0 })
     nameRef.current?.focus()
@@ -175,9 +201,17 @@ export function MedicineForm({ id, prefill, entry = { method: 'manual' }, top, o
 
   return (
     <div className="screen form-screen">
-      {!top && <Header title={editing ? '약 정보 수정' : '약 등록'} back />}
-      {toast && <div className="toast">✓ {toast}</div>}
+      {!top && <Header title={editing ? '정보 수정' : TEXT[type].title} back />}
+      {toast && <div className="toast"><Check size={18} aria-hidden /> {toast}</div>}
       {top}
+      {!isMed && !editing && (
+        <OcrAssist
+          onPhoto={(p) => set('photo', p)}
+          onName={(name, engine) => { set('name', name); setOcrUsed({ nameApplied: true, engine }) }}
+          onExpiry={(v, engine) => { set('expInput', formatExp(v)); setOcrUsed((o) => o ?? { nameApplied: false, engine }) }}
+          onRead={(engine) => setOcrUsed((o) => o ?? { nameApplied: false, engine })}
+        />
+      )}
 
       <label className={`field ${err('name') ? 'has-error' : ''}`} data-field="name">
         <span className="label">제품명 <em>*</em></span>
@@ -191,7 +225,7 @@ export function MedicineForm({ id, prefill, entry = { method: 'manual' }, top, o
           }}
           onFocus={() => setNameFocused(true)}
           onBlur={() => setTimeout(() => setNameFocused(false), 150)}
-          placeholder="약 이름 (포장에 적힌 그대로)"
+          placeholder={TEXT[type].name}
           autoComplete="off"
         />
         {suggestions.length + dbSuggestions.length > 0 && (
@@ -238,7 +272,7 @@ export function MedicineForm({ id, prefill, entry = { method: 'manual' }, top, o
                 setF((p) => ({ ...p, categoryId: c.id, isPrescription: c.id === RX_CATEGORY ? true : p.isPrescription }))
               }
             >
-              <span className="cat-icon">{c.icon}</span>
+              <CategoryIcon id={c.id} className="cat-icon" size={22} strokeWidth={1.75} />
               {c.name}
               {suggestedCat === c.id && <span className="rec">추천</span>}
             </button>
@@ -270,7 +304,7 @@ export function MedicineForm({ id, prefill, entry = { method: 'manual' }, top, o
       <div className="field">
         <span className="label">
           가족
-          {!editing && <KeepToggle on={keep.family} onChange={(v) => setKeep({ ...keep, family: v })} label="유지 (처방 정보 포함)" />}
+          {!editing && <KeepToggle on={keep.family} onChange={(v) => setKeep({ ...keep, family: v })} label={isMed ? '유지 (처방 정보 포함)' : '다음에도 유지'} />}
         </span>
         <div className="chips">
           {members.map((m) => (
@@ -282,7 +316,7 @@ export function MedicineForm({ id, prefill, entry = { method: 'manual' }, top, o
       </div>
 
       <label className={`field ${err('exp') ? 'has-error' : ''}`} data-field="exp">
-        <span className="label">유효기간</span>
+        <span className="label">{TEXT[type].exp}</span>
         <input
           inputMode="decimal"
           value={f.expInput}
@@ -297,7 +331,21 @@ export function MedicineForm({ id, prefill, entry = { method: 'manual' }, top, o
         {expInvalid && <span className="hint error">형식을 확인해 주세요 (예: 2708, 2027.08, 20270815)</span>}
       </label>
 
-      <div className={`rx-box ${f.isPrescription ? 'on' : ''}`}>
+      {type === 'SUPPLEMENT' && (
+        <>
+          <label className="field">
+            <span className="label">주요 성분</span>
+            <input value={f.supIngredients} onChange={(e) => set('supIngredients', e.target.value)} placeholder="예: 비타민D, 칼슘 (제품 표시 그대로)" />
+          </label>
+          <label className="field">
+            <span className="label">섭취방법·1일 섭취량 (제품 표시)</span>
+            <input value={f.supIntake} onChange={(e) => set('supIntake', e.target.value)} placeholder="포장에 적힌 내용을 그대로 입력" />
+            <span className="hint muted">앱이 섭취량을 정하지 않습니다. 제품 표시 내용만 기록하세요.</span>
+          </label>
+        </>
+      )}
+
+      {isMed && <div className={`rx-box ${f.isPrescription ? 'on' : ''}`}>
         <label className="switch-row">
           <span className="label">처방약</span>
           <input type="checkbox" className="switch" checked={f.isPrescription} onChange={(e) => set('isPrescription', e.target.checked)} />
@@ -331,7 +379,7 @@ export function MedicineForm({ id, prefill, entry = { method: 'manual' }, top, o
             </div>
           </>
         )}
-      </div>
+      </div>}
 
       <div className="row-2">
         <label className="field">
@@ -347,7 +395,7 @@ export function MedicineForm({ id, prefill, entry = { method: 'manual' }, top, o
             </div>
           ) : (
             <label className="btn btn-outline photo-btn">
-              📷 촬영
+              <Camera size={20} aria-hidden /> 촬영
               <input type="file" accept="image/*" capture="environment" hidden onChange={(e) => onPhoto(e.target.files?.[0])} />
             </label>
           )}
@@ -369,7 +417,7 @@ export function MedicineForm({ id, prefill, entry = { method: 'manual' }, top, o
           <>
             <button className="btn btn-outline" onClick={() => save(false)}>저장</button>
             <button className="btn btn-primary grow" onClick={() => save(true)}>
-              {onSaveNextPhoto ? '📷 저장하고 다음 약 촬영' : '저장 후 다음 약 ›'}
+              {onSaveNextPhoto ? <><Camera size={20} aria-hidden /> 저장하고 다음 약 촬영</> : TEXT[type].next}
             </button>
           </>
         )}
@@ -381,7 +429,65 @@ export function MedicineForm({ id, prefill, entry = { method: 'manual' }, top, o
 function KeepToggle({ on, onChange, label = '다음 약에도 유지' }: { on: boolean; onChange: (v: boolean) => void; label?: string }) {
   return (
     <button type="button" className={`keep ${on ? 'on' : ''}`} onClick={() => onChange(!on)}>
-      {on ? '📌' : '○'} {label}
+      <Pin size={14} aria-hidden /> {label}
     </button>
+  )
+}
+
+// 영양제·의료용품용 사진 읽기: 읽은 값은 '적용'/'맞아요'를 눌러야 입력란에 들어간다
+function OcrAssist({ onPhoto, onName, onExpiry, onRead }: {
+  onPhoto: (dataUrl: string) => void
+  onName: (name: string, engine: string) => void
+  onExpiry: (v: string, engine: string) => void
+  onRead: (engine: string) => void
+}) {
+  const [state, setState] = useState<'idle' | 'reading' | 'done'>('idle')
+  const [read, setRead] = useState<{ name: string | null; expiry: string | null; engine: string } | null>(null)
+  const [applied, setApplied] = useState({ name: false, expiry: false })
+
+  async function onFile(file?: File) {
+    if (!file) return
+    setState('reading'); setApplied({ name: false, expiry: false })
+    compressImage(file).then(onPhoto).catch(() => {})
+    try {
+      const r = await recognize(file, 'product')
+      const name = [r.productName, r.strength].filter(Boolean).join(' ') || r.texts[0] || null
+      setRead({ name, expiry: r.expiry, engine: r.engineLabel })
+      onRead(r.engineLabel)
+    } catch {
+      setRead({ name: null, expiry: null, engine: '' })
+    }
+    setState('done')
+  }
+
+  return (
+    <div className="card ocr-assist">
+      <label className="btn btn-outline full">
+        <ScanLine size={20} aria-hidden /> {state === 'idle' ? '사진으로 제품명·기한 읽기' : '다시 촬영'}
+        <input type="file" accept="image/*" capture="environment" hidden onChange={(e) => { onFile(e.target.files?.[0]); e.target.value = '' }} />
+      </label>
+      {state === 'reading' && <p className="muted center">사진에서 글자를 읽는 중…</p>}
+      {state === 'done' && read && (
+        <div className="ocr-result">
+          <p className="muted small">사진에서 읽은 내용입니다. 확인 후 적용하세요.</p>
+          {read.name ? (
+            <div className="ocr-row">
+              <span className="grow">제품명 <b>{read.name}</b></span>
+              <button type="button" className="chip" disabled={applied.name} onClick={() => { onName(read.name!, read.engine); setApplied({ ...applied, name: true }) }}>
+                {applied.name ? '적용됨' : '적용'}
+              </button>
+            </div>
+          ) : <p className="small">제품명을 읽지 못했어요. 직접 입력해 주세요.</p>}
+          {read.expiry ? (
+            <div className="ocr-row">
+              <span className="grow"><b>{formatExp(read.expiry)}</b>로 읽었습니다. 맞나요?</span>
+              <button type="button" className="chip" disabled={applied.expiry} onClick={() => { onExpiry(read.expiry!, read.engine); setApplied({ ...applied, expiry: true }) }}>
+                {applied.expiry ? '적용됨' : '맞아요'}
+              </button>
+            </div>
+          ) : <p className="small">기한을 읽지 못했어요. 직접 입력해 주세요.</p>}
+        </div>
+      )}
+    </div>
   )
 }

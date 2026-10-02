@@ -1,3 +1,4 @@
+import { Camera, Check, Keyboard, LoaderCircle, Search } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useHousehold, useStore } from '../data/store'
 import { activeSession } from '../data/actions'
@@ -144,7 +145,7 @@ export function PhotoRegister() {
         onChange={(e) => { onExpiryPhoto(e.target.files?.[0]); e.target.value = '' }} />
     </>
   )
-  const toastEl = toast && <div className="toast">✓ {toast}</div>
+  const toastEl = toast && <div className="toast"><Check size={18} aria-hidden /> {toast}</div>
 
   // 카메라 입력은 화면 단계가 바뀌어도 같은 요소로 유지해야 촬영 결과가 전달된다
   return (
@@ -190,12 +191,12 @@ export function PhotoRegister() {
           </label>
         </div>
         <button className="btn btn-primary big-cta" onClick={openCamera}>
-          <span className="cta-icon">📷</span>
+          <Camera className="cta-icon" size={36} strokeWidth={1.75} aria-hidden />
           약 사진 찍기
           <span className="cta-sub">약 이름과 유효기간이 보이도록 촬영해주세요.<br />가능하면 약 상자 전체가 들어오게 찍어주세요.</span>
         </button>
         <button className="btn btn-outline big-cta secondary" onClick={() => setStage('manual')}>
-          <span className="cta-icon">⌨️</span>
+          <Keyboard className="cta-icon" size={24} strokeWidth={1.9} aria-hidden />
           직접 검색/입력
         </button>
         <p className="muted small pad">
@@ -224,7 +225,7 @@ export function PhotoRegister() {
         {toastEl}
         {previewUrl && <img className="preview-img" src={previewUrl} alt="촬영한 약 사진" />}
         <p className="muted small pad center">
-          {recog?.status === 'running' ? '⏳ 글자를 읽는 중…' : '약 이름과 유효기간이 잘 보이나요?'}
+          {recog?.status === 'running' ? <span className="with-icon center-inline"><LoaderCircle size={18} className="spin" aria-hidden />글자를 읽는 중…</span> : '약 이름과 유효기간이 잘 보이나요?'}
         </p>
         <div className="form-actions">
           <button className="btn btn-outline" onClick={openCamera}>다시 찍기</button>
@@ -261,7 +262,7 @@ export function PhotoRegister() {
                 <div>
                   <div className="med-name">{chosen.name || '(제품명 직접 입력)'}</div>
                   <div className="muted small">
-                    유효기간 {expiry.value ? formatExp(expiry.value) : '미입력'} ✓ 확인됨
+                    유효기간 {expiry.value ? formatExp(expiry.value) : '미입력'} · 확인됨
                   </div>
                 </div>
               </div>
@@ -289,11 +290,11 @@ export function PhotoRegister() {
       {/* 1. 제품 */}
       <section className="card step">
         <div className="step-title">1. 제품 확인</div>
-        {recog?.status === 'running' && <p className="center pad">⏳ 사진에서 글자를 읽는 중…</p>}
+        {recog?.status === 'running' && <p className="center pad with-icon center-inline"><LoaderCircle size={18} className="spin" aria-hidden />사진에서 글자를 읽는 중…</p>}
 
         {chosen && !searching ? (
           <div className="chosen-row">
-            <span>✓ <b>{chosen.name || '제품명 직접 입력'}</b></span>
+            <span className="with-icon"><Check size={20} aria-hidden /><b>{chosen.name || '제품명 직접 입력'}</b></span>
             <button className="chip" onClick={() => setChosen(null)}>변경</button>
           </div>
         ) : searching ? (
@@ -337,16 +338,16 @@ export function PhotoRegister() {
               </button>
             )}
             <button className="cand" onClick={() => { setSearching(true); setQuery(ocr?.productName ?? '') }}>
-              🔍 직접 검색하기
+              <Search size={20} aria-hidden /> 직접 검색하기
             </button>
           </>
         ) : recog && recog.status !== 'running' ? (
           <div className="fail">
             <p className="q">제품을 정확하게 찾지 못했어요.</p>
             <div className="stack">
-              <button className="btn btn-outline" onClick={openCamera}>📷 다시 촬영</button>
-              <button className="btn btn-outline" onClick={() => { setSearching(true); setQuery('') }}>🔍 제품명 검색</button>
-              <button className="btn btn-outline" onClick={() => choose({ name: '', recognized: false })}>⌨️ 직접 입력</button>
+              <button className="btn btn-outline" onClick={openCamera}><Camera size={20} aria-hidden /> 다시 촬영</button>
+              <button className="btn btn-outline" onClick={() => { setSearching(true); setQuery('') }}><Search size={20} aria-hidden /> 제품명 검색</button>
+              <button className="btn btn-outline" onClick={() => choose({ name: '', recognized: false })}><Keyboard size={20} aria-hidden /> 직접 입력</button>
             </div>
           </div>
         ) : null}
@@ -369,11 +370,11 @@ function ExpiryStep({ state, setState, onReshoot }: {
   setState: (s: ExpiryState) => void
   onReshoot: () => void
 }) {
-  if (state.kind === 'reading') return <p className="center pad">⏳ 유효기간을 읽는 중…</p>
+  if (state.kind === 'reading') return <p className="center pad with-icon center-inline"><LoaderCircle size={18} className="spin" aria-hidden />유효기간을 읽는 중…</p>
   if (state.kind === 'confirmed') {
     return (
       <div className="chosen-row">
-        <span>✓ <b>{state.value ? formatExp(state.value) : '유효기간 없음/나중에'}</b></span>
+        <span className="with-icon"><Check size={20} aria-hidden /><b>{state.value ? formatExp(state.value) : '유효기간 없음/나중에'}</b></span>
         <button className="chip" onClick={() => setState({ kind: 'editing', input: state.value ? formatExp(state.value) : '' })}>변경</button>
       </div>
     )
@@ -399,7 +400,7 @@ function ExpiryStep({ state, setState, onReshoot }: {
         {parsed && <p className={`hint status-${expiryStatus(parsed)}`}>→ {formatExp(parsed)} · {EXPIRY_LABEL[expiryStatus(parsed)]}</p>}
         {state.input.trim() && !parsed && <p className="hint error">형식을 확인해 주세요</p>}
         <div className="row-2">
-          <button className="btn btn-outline" onClick={onReshoot}>📷 다시 찍기</button>
+          <button className="btn btn-outline" onClick={onReshoot}><Camera size={20} aria-hidden /> 다시 찍기</button>
           <button className="btn btn-primary" disabled={!parsed} onClick={() => setState({ kind: 'confirmed', value: parsed })}>확인</button>
         </div>
       </>
@@ -409,9 +410,9 @@ function ExpiryStep({ state, setState, onReshoot }: {
     <>
       <p className="q">유효기간을 찾지 못했어요.</p>
       <div className="stack">
-        <button className="btn btn-primary" onClick={onReshoot}>📷 유효기간 부분만 다시 찍기</button>
+        <button className="btn btn-primary" onClick={onReshoot}><Camera size={20} aria-hidden /> 유효기간 부분만 다시 찍기</button>
         <p className="muted small">상자 옆면·바닥의 EXP, 사용기한, 유효기간이 보이게 찍어주세요.</p>
-        <button className="btn btn-outline" onClick={() => setState({ kind: 'editing', input: '' })}>⌨️ 직접 입력</button>
+        <button className="btn btn-outline" onClick={() => setState({ kind: 'editing', input: '' })}><Keyboard size={20} aria-hidden /> 직접 입력</button>
         <button className="btn btn-outline" onClick={() => setState({ kind: 'confirmed', value: null })}>표시가 없어요 / 나중에</button>
       </div>
     </>

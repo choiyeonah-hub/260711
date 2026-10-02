@@ -13,7 +13,9 @@ export type Route =
   | { name: 'cabinet' }
   | { name: 'schedule' }
   | { name: 'settings' }
-  | { name: 'add' }
+  | { name: 'add' } // 품목 유형 선택
+  | { name: 'addMedicine' } // 의약품: 사진 등록 흐름
+  | { name: 'addItem'; productType: 'SUPPLEMENT' | 'MEDICAL_SUPPLY' }
   | { name: 'edit'; id: string }
   | { name: 'list'; title: string; filter: ListFilter }
   | { name: 'notifications' }
