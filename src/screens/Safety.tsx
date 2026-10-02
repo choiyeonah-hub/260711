@@ -55,6 +55,7 @@ export function MedicineDetail({ id }: { id: string }) {
           {m.supplement?.ingredients && <><dt>주요 성분</dt><dd>{m.supplement.ingredients}</dd></>}
           {m.supplement?.intakeLabel && <><dt>섭취방법 (제품 표시)</dt><dd>{m.supplement.intakeLabel}</dd></>}
           {m.quantity && <><dt>수량</dt><dd>{m.quantity}</dd></>}
+          {m.keywords && <><dt>찾기용 단어</dt><dd>{m.keywords}</dd></>}
           {m.memo && <><dt>메모</dt><dd>{m.memo}</dd></>}
           {isMed && <><dt>제품 식별</dt><dd className={idStatus === 'UNVERIFIED' ? 'warn-text' : ''}>{IDENTIFICATION_LABEL[idStatus]}</dd></>}
         </dl>

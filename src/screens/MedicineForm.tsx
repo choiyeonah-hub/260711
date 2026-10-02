@@ -74,6 +74,7 @@ export function MedicineForm({ id, prefill, entry: entryProp = { method: 'manual
           expInput: editing.expirationDate ? formatExp(editing.expirationDate) : '',
           quantity: editing.quantity ?? '',
           memo: editing.memo ?? '',
+          keywords: editing.keywords ?? '',
           isPrescription: editing.isPrescription,
           nextAppointmentDate: editing.nextAppointmentDate ?? '',
           currentUseStatus: editing.currentUseStatus ?? 'UNKNOWN',
@@ -89,6 +90,7 @@ export function MedicineForm({ id, prefill, entry: entryProp = { method: 'manual
           expInput: prefill?.expInput ?? '',
           quantity: '',
           memo: '',
+          keywords: '',
           isPrescription: isMed && last.keepFamily ? last.isPrescription : false,
           nextAppointmentDate: isMed && last.keepFamily ? last.nextAppointmentDate : '',
           currentUseStatus: 'UNKNOWN' as CurrentUseStatus,
@@ -150,6 +152,7 @@ export function MedicineForm({ id, prefill, entry: entryProp = { method: 'manual
           expirationDate: expParsed,
           quantity: f.quantity.trim() || null,
           memo: f.memo.trim() || null,
+          keywords: f.keywords.trim() || null,
           isPrescription: isMed && f.isPrescription,
           nextAppointmentDate: isMed && f.isPrescription && f.nextAppointmentDate ? f.nextAppointmentDate : null,
           currentUseStatus: isMed && f.isPrescription ? f.currentUseStatus : undefined,
@@ -401,6 +404,12 @@ export function MedicineForm({ id, prefill, entry: entryProp = { method: 'manual
           )}
         </div>
       </div>
+
+      <label className="field">
+        <span className="label">찾기용 단어</span>
+        <input value={f.keywords} onChange={(e) => set('keywords', e.target.value)} placeholder="예: 기침, 화상, 아들이 사준 약" />
+        <span className="hint muted">이 단어로 검색하면 이 품목이 나옵니다. 쉼표로 여러 개 입력할 수 있어요.</span>
+      </label>
 
       <label className="field">
         <span className="label">메모</span>

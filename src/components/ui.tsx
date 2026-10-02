@@ -46,6 +46,7 @@ export function MedicineCard({ m }: { m: Medicine }) {
           {member && ` · ${member.name}`}
           {m.expirationDate && ` · ~${formatExp(m.expirationDate)}`}
         </div>
+        {m.keywords && <div className="med-keywords">찾기용 단어 · {m.keywords}</div>}
         <ExpiryBadge status={st} />
       </div>
     </button>

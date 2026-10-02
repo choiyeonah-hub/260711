@@ -64,6 +64,8 @@ export interface Medicine {
   nextAppointmentDate: string | null // 'YYYY-MM-DD'. 사용자가 입력한 값만 저장(추정 금지)
   photo: string | null // 압축된 JPEG dataURL
   memo: string | null
+  // 가족이 붙인 찾기용 단어 (예: '기침, 아들이 사준 약'). 검색에만 사용, 앱이 의미를 해석하지 않음
+  keywords?: string | null
   // 외부 의약품 DB(식약처 등) 연결용. 우리 12분류(categoryId)와 별개로 보관.
   product?: {
     source: 'manual' | 'mock' | 'mfds'

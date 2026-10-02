@@ -46,7 +46,8 @@ export function Home() {
           const cat = categories.find((c) => c.id === m.categoryId)?.name ?? ''
           const loc = locations.find((l) => l.id === m.storageLocationId)?.name ?? ''
           const mem = members.find((f) => f.id === m.familyMemberId)?.name ?? ''
-          return [m.name, cat, loc, mem].some((s) => s.toLowerCase().includes(query))
+          // 이름·분류·위치·가족 + 가족이 붙인 찾기용 단어·메모
+          return [m.name, cat, loc, mem, m.keywords ?? '', m.memo ?? ''].some((s) => s.toLowerCase().includes(query))
         }),
       )
     : []
