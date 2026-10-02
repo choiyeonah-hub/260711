@@ -8,11 +8,13 @@ import { searchProducts } from '../services/drugDb'
 import { medicineSearch } from '../services/medicineSearch'
 import { suggestCategory } from '../services/categoryMapper'
 import type { ProductRecord } from '../services/mockMedicineDb'
-import type { Medicine } from '../types'
+import type { CurrentUseStatus, Medicine } from '../types'
+import { splitIngredients } from '../data/medicineMeta'
 import { useNav } from '../nav'
 import { Header } from '../components/ui'
 
 const RX_CATEGORY = 'c06'
+const USE_OPTIONS: [CurrentUseStatus, string][] = [['IN_USE', '복용 중'], ['NOT_IN_USE', '복용 안 함'], ['UNKNOWN', '확인 필요']]
 
 // 사진 인식/DB 선택 결과로 미리 채울 값
 export interface Prefill {
@@ -27,6 +29,7 @@ export function productRef(p: ProductRecord, source: 'mock' | 'mfds' = 'mock'): 
   return {
     source, externalId: p.id, externalCategory: p.externalClass,
     manufacturer: p.manufacturer, strength: p.strength, dosageForm: p.dosageForm,
+    ingredients: splitIngredients(p.ingredient),
   }
 }
 
@@ -59,6 +62,7 @@ export function MedicineForm({ id, prefill, entry = { method: 'manual' }, top, o
           memo: editing.memo ?? '',
           isPrescription: editing.isPrescription,
           nextAppointmentDate: editing.nextAppointmentDate ?? '',
+          currentUseStatus: editing.currentUseStatus ?? 'UNKNOWN',
           photo: editing.photo,
         }
       : {
@@ -71,6 +75,7 @@ export function MedicineForm({ id, prefill, entry = { method: 'manual' }, top, o
           memo: '',
           isPrescription: last.keepFamily ? last.isPrescription : false,
           nextAppointmentDate: last.keepFamily ? last.nextAppointmentDate : '',
+          currentUseStatus: 'UNKNOWN' as CurrentUseStatus,
           photo: (prefill?.photo ?? null) as string | null,
         }
 
@@ -83,10 +88,10 @@ export function MedicineForm({ id, prefill, entry = { method: 'manual' }, top, o
   const [dbHits, setDbHits] = useState<ProductRecord[]>([])
   useEffect(() => {
     let alive = true
-    if (editing || f.name.trim().length < 2) { setDbHits([]); return }
+    if (f.name.trim().length < 2) { setDbHits([]); return }
     medicineSearch.search(f.name, 4).then((r) => alive && setDbHits(r.filter((p) => p.name !== f.name)))
     return () => { alive = false }
-  }, [f.name, editing])
+  }, [f.name])
   const [suggestedCat, setSuggestedCat] = useState(prefill?.categoryId ?? '')
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((p) => ({ ...p, [k]: v }))
 
@@ -128,6 +133,7 @@ export function MedicineForm({ id, prefill, entry = { method: 'manual' }, top, o
           memo: f.memo.trim() || null,
           isPrescription: f.isPrescription,
           nextAppointmentDate: f.isPrescription && f.nextAppointmentDate ? f.nextAppointmentDate : null,
+          currentUseStatus: f.isPrescription ? f.currentUseStatus : undefined,
           photo: f.photo,
           product,
           sessionId: editing ? (editing.sessionId ?? null) : (session?.id ?? null),
@@ -313,6 +319,16 @@ export function MedicineForm({ id, prefill, entry = { method: 'manual' }, top, o
               <input type="date" value={f.nextAppointmentDate} onChange={(e) => set('nextAppointmentDate', e.target.value)} />
               <span className="hint muted">약 봉투·처방전 또는 본인이 알려준 날짜만 입력하세요.</span>
             </label>
+            <div className="field">
+              <span className="label">현재 복용 여부 (가족에게 확인)</span>
+              <div className="chips">
+                {USE_OPTIONS.map(([v, label]) => (
+                  <button type="button" key={v} className={`chip ${f.currentUseStatus === v ? 'on' : ''}`} onClick={() => set('currentUseStatus', v)}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </>
         )}
       </div>
@@ -353,7 +369,7 @@ export function MedicineForm({ id, prefill, entry = { method: 'manual' }, top, o
           <>
             <button className="btn btn-outline" onClick={() => save(false)}>저장</button>
             <button className="btn btn-primary grow" onClick={() => save(true)}>
-              {onSaveNextPhoto ? '저장 후 📷 다음 약 촬영' : '저장 후 다음 약 ›'}
+              {onSaveNextPhoto ? '📷 저장하고 다음 약 촬영' : '저장 후 다음 약 ›'}
             </button>
           </>
         )}

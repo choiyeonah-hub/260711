@@ -28,7 +28,7 @@ export function MedicineCard({ m }: { m: Medicine }) {
   const member = members.find((f) => f.id === m.familyMemberId)
   const st = expiryStatus(m.expirationDate)
   return (
-    <button className={`card med-card ${st === 'expired' ? 'is-expired' : ''}`} onClick={() => nav.push({ name: 'edit', id: m.id })}>
+    <button className={`card med-card ${st === 'expired' ? 'is-expired' : ''}`} onClick={() => nav.push({ name: 'detail', id: m.id })}>
       {m.photo ? <img className="thumb" src={m.photo} alt="" /> : <div className="thumb thumb-icon">{cat?.icon ?? '💊'}</div>}
       <div className="med-body">
         <div className="med-name">

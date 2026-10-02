@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useHousehold, useStore } from '../data/store'
-import { markRemindersRead } from '../data/actions'
+import { markRemindersRead, setLocationType } from '../data/actions'
+import { STORAGE_TYPES, type StorageType } from '../types'
 import { dday, expiryStatus, formatMD, isSoon } from '../lib/dates'
 import { computeReminders, upcomingAppointments } from '../lib/reminders'
 import { useNav, type ListFilter } from '../nav'
@@ -8,6 +9,7 @@ import { Empty, Header, MedicineCard, sortMedicines } from '../components/ui'
 
 export function Cabinet() {
   const nav = useNav()
+  const { update } = useStore()
   const { categories, medicines, locations } = useHousehold()
   const usedLocs = locations
     .map((l) => ({ l, n: medicines.filter((m) => m.storageLocationId === l.id).length }))
@@ -34,9 +36,20 @@ export function Cabinet() {
         <>
           <p className="section-title">보관 위치별</p>
           {usedLocs.map(({ l, n }) => (
-            <button key={l.id} className="card row-card" onClick={() => nav.push({ name: 'list', title: `📍 ${l.name}`, filter: { locationId: l.id } })}>
-              <span>📍 {l.name}</span><b>{n}</b>
-            </button>
+            <div key={l.id} className="card row-card">
+              <button className="grow left" onClick={() => nav.push({ name: 'list', title: `📍 ${l.name}`, filter: { locationId: l.id } })}>
+                📍 {l.name} <b className="loc-count">{n}</b>
+              </button>
+              <select
+                className="type-select"
+                aria-label="수납 방식"
+                value={l.storageType ?? ''}
+                onChange={(e) => update((d) => setLocationType(d, l.id, (e.target.value || undefined) as StorageType | undefined))}
+              >
+                <option value="">수납 방식</option>
+                {STORAGE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
           ))}
         </>
       )}
@@ -130,7 +143,7 @@ export function Notifications() {
         <button
           key={r.id}
           className={`card notice ${r.urgent ? 'urgent' : ''} ${readSnapshot.includes(r.id) ? '' : 'unread'}`}
-          onClick={() => (r.type === 'expiry' ? nav.push({ name: 'edit', id: r.targetId }) : nav.tab('schedule'))}
+          onClick={() => (r.type === 'expiry' ? nav.push({ name: 'detail', id: r.targetId }) : nav.tab('schedule'))}
         >
           <span>{r.type === 'expiry' ? '⏰' : '🏥'}</span>
           <span className="grow">{r.message}</span>

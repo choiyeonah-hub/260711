@@ -3,6 +3,7 @@ import { NavCtx, type Nav, type Route, type Tab } from './nav'
 import { Home } from './screens/Home'
 import { MedicineForm } from './screens/MedicineForm'
 import { PhotoRegister } from './screens/PhotoRegister'
+import { MedicineDetail, PharmacistList, Preparedness, SafetyCheck } from './screens/Safety'
 import { Cabinet, MedicineList, Notifications, Schedule } from './screens/Browse'
 import { SessionBar, SessionStart, SessionSummary, SurveyScreen } from './screens/Session'
 import { NewHousehold, Settings } from './screens/Settings'
@@ -66,5 +67,9 @@ function renderRoute(r: Route) {
     case 'sessionSummary': return <SessionSummary id={r.id} />
     case 'survey': return <SurveyScreen sessionId={r.sessionId} />
     case 'newHousehold': return <NewHousehold />
+    case 'detail': return <MedicineDetail id={r.id} />
+    case 'safety': return <SafetyCheck />
+    case 'questions': return <PharmacistList />
+    case 'prep': return <Preparedness />
   }
 }

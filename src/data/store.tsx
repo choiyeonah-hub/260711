@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { AppData } from '../types'
-import { emptyData } from './defaults'
+import { emptyData, normalizeData } from './defaults'
 import { localRepository as repo } from './repository'
 import { addSampleHousehold } from './sample'
 
@@ -21,7 +21,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     repo.load()
       .then((loaded) => {
         // 첫 실행에는 화면 확인용 샘플 가정을 넣는다 (설정에서 삭제 가능)
-        const d = loaded ?? addSampleHousehold(emptyData())
+        const d = loaded ? normalizeData(loaded) : addSampleHousehold(emptyData())
         latest.current = d
         setData(d)
         if (!loaded) repo.save(d)

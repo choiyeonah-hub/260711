@@ -21,6 +21,10 @@ export type Route =
   | { name: 'sessionSummary'; id: string }
   | { name: 'survey'; sessionId: string | null }
   | { name: 'newHousehold' }
+  | { name: 'detail'; id: string }
+  | { name: 'safety' }
+  | { name: 'questions' }
+  | { name: 'prep' }
 
 export type Tab = 'home' | 'cabinet' | 'add' | 'schedule' | 'settings'
 

@@ -37,7 +37,7 @@ type ExpiryState =
 
 export function PhotoRegister() {
   const { data } = useStore()
-  const { household, members } = useHousehold()
+  const { household, members, categories } = useHousehold()
   const session = activeSession(data, household?.id ?? null)
   const camRef = useRef<HTMLInputElement>(null)
   const expCamRef = useRef<HTMLInputElement>(null)
@@ -54,7 +54,7 @@ export function PhotoRegister() {
   const [results, setResults] = useState<ProductRecord[]>([])
   const [engine, setEngine] = useState<'ai' | 'device' | null>(null)
   const [toast, setToast] = useState('')
-  const [keep, setKeep] = useState({ family: entryMemory.keepFamily, location: entryMemory.keepLocation })
+  const [keep, setKeep] = useState({ family: entryMemory.keepFamily, location: entryMemory.keepLocation, category: entryMemory.keepCategory })
 
   useEffect(() => {
     checkServer().then((ok) => {
@@ -169,7 +169,7 @@ export function PhotoRegister() {
             <span className="keep-check">
               <input type="checkbox" checked={keep.family}
                 onChange={(e) => { entryMemory.keepFamily = e.target.checked; setKeep({ ...keep, family: e.target.checked }) }} />
-              다음 약에도 유지
+              같은 가족 유지
             </span>
           </label>
           <label className="ctx-row">
@@ -177,7 +177,15 @@ export function PhotoRegister() {
             <span className="keep-check">
               <input type="checkbox" checked={keep.location}
                 onChange={(e) => { entryMemory.keepLocation = e.target.checked; setKeep({ ...keep, location: e.target.checked }) }} />
-              다음 약에도 유지
+              같은 보관위치 유지
+            </span>
+          </label>
+          <label className="ctx-row">
+            <span>현재 카테고리: <b>{(keep.category && categories.find((c) => c.id === entryMemory.categoryId)?.name) || '사진 인식 후 추천'}</b></span>
+            <span className="keep-check">
+              <input type="checkbox" checked={keep.category}
+                onChange={(e) => { entryMemory.keepCategory = e.target.checked; setKeep({ ...keep, category: e.target.checked }) }} />
+              같은 카테고리 유지
             </span>
           </label>
         </div>
@@ -230,7 +238,10 @@ export function PhotoRegister() {
   if (stage === 'confirm' && chosen && expiry.kind === 'confirmed') {
     const prefill: Prefill = {
       name: chosen.name,
-      categoryId: chosen.product ? suggestCategory(chosen.product) : undefined,
+      // '같은 카테고리 유지'가 켜져 있으면 그 값을, 아니면 DB 분류에서 추천
+      categoryId: entryMemory.keepCategory && entryMemory.categoryId
+        ? entryMemory.categoryId
+        : chosen.product ? suggestCategory(chosen.product) : undefined,
       expInput: expiry.value ? formatExp(expiry.value) : '',
       photo,
       product: chosen.product ? productRef(chosen.product) : { source: 'manual' },

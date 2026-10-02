@@ -1,5 +1,6 @@
-import type { AppData, FamilyMember, Household, Medicine, OrganizationSession, Survey } from '../types'
-import { expiryStatus } from '../lib/dates'
+import type { AppData, FamilyMember, Household, Medicine, OrganizationSession, PharmacistQuestion, StorageType, Survey, WorkPhase } from '../types'
+import { identificationOf, isIdentified, productTypeOf } from './medicineMeta'
+import { expiryStatus, isSoon } from '../lib/dates'
 import { makeShareCode, uid } from './defaults'
 
 // 모든 변경은 (data) => newData 순수 함수로. 저장은 store가 담당한다.
@@ -29,6 +30,8 @@ export function deleteHousehold(d: AppData, id: string): AppData {
     medicines: keep(d.medicines),
     sessions: keep(d.sessions),
     surveys: keep(d.surveys),
+    pharmacistQuestions: keep(d.pharmacistQuestions),
+    preparednessChecks: keep(d.preparednessChecks),
   }
 }
 
@@ -64,7 +67,13 @@ export type MedicineInput = Omit<Medicine, 'id' | 'householdId' | 'storageLocati
 }
 
 export function saveMedicine(d: AppData, householdId: string, input: MedicineInput, id?: string): AppData {
-  const { locationName, ...rest } = input
+  const { locationName, ...fields } = input
+  // 식별 상태·제품 유형은 입력값에서 결정 (DB 제품을 고르면 확인됨, 이름만 입력하면 미확인)
+  const rest = {
+    ...fields,
+    identificationStatus: identificationOf({ ...fields, identificationStatus: undefined } as Medicine),
+    productType: productTypeOf({ ...fields, productType: undefined }),
+  }
   const [d2, storageLocationId] = ensureLocation(d, householdId, locationName)
   if (id) {
     return {
@@ -126,6 +135,13 @@ export function endSession(d: AppData, sessionId: string): AppData {
     sessions: d.sessions.map((s) => {
       if (s.id !== sessionId) return s
       const regs = d.medicines.filter((m) => m.sessionId === s.id)
+      const all = d.medicines.filter((m) => m.householdId === s.householdId)
+      const persons = new Set(d.familyMembers.filter((f) => f.householdId === s.householdId && !f.isShared).map((f) => f.id))
+      const rx = all.filter((m) => m.isPrescription)
+      const unidentified = all.filter((m) => !isIdentified(m))
+      const ownerUnknown = rx.filter((m) => !m.familyMemberId || !persons.has(m.familyMemberId))
+      const useUnknown = rx.filter((m) => (m.currentUseStatus ?? 'UNKNOWN') === 'UNKNOWN')
+      const review = new Set([...unidentified, ...ownerUnknown, ...useUnknown].map((m) => m.id))
       return {
         ...s,
         endedAt: end.toISOString(),
@@ -138,6 +154,14 @@ export function endSession(d: AppData, sessionId: string): AppData {
           photoEntryCount: s.photoEntryCount ?? 0,
           manualEntryCount: s.manualEntryCount ?? 0,
           recognitionSuccessRate: s.photoEntryCount ? Math.round(((s.recognitionSuccessCount ?? 0) / s.photoEntryCount) * 100) : null,
+          recognitionSuccessCount: s.recognitionSuccessCount ?? 0,
+          prescriptionTotal: rx.length,
+          otcCount: all.length - rx.length,
+          expiringSoonCount: all.filter((m) => isSoon(expiryStatus(m.expirationDate))).length,
+          unidentifiedCount: unidentified.length,
+          rxOwnerUnknownCount: ownerUnknown.length,
+          rxUseUnknownCount: useUnknown.length,
+          needsReviewCount: review.size,
         },
       }
     }),
@@ -150,4 +174,31 @@ export function addSurvey(d: AppData, s: Omit<Survey, 'id' | 'createdAt'>): AppD
 
 export function markRemindersRead(d: AppData, ids: string[]): AppData {
   return { ...d, readReminderIds: Array.from(new Set([...d.readReminderIds, ...ids])) }
+}
+
+export function setLocationType(d: AppData, locationId: string, storageType: StorageType | undefined): AppData {
+  return { ...d, storageLocations: d.storageLocations.map((l) => (l.id === locationId ? { ...l, storageType } : l)) }
+}
+
+export function setPhaseMinutes(d: AppData, sessionId: string, phaseMinutes: Partial<Record<WorkPhase, number>>): AppData {
+  return { ...d, sessions: d.sessions.map((s) => (s.id === sessionId ? { ...s, phaseMinutes } : s)) }
+}
+
+// 약사에게 확인할 목록 (refKey 가 같으면 중복 추가하지 않음)
+export function addQuestion(d: AppData, q: Omit<PharmacistQuestion, 'id' | 'createdAt' | 'done'>): AppData {
+  if (q.refKey && d.pharmacistQuestions.some((x) => x.householdId === q.householdId && x.refKey === q.refKey)) return d
+  return { ...d, pharmacistQuestions: [...d.pharmacistQuestions, { ...q, id: uid(), done: false, createdAt: now() }] }
+}
+
+export function toggleQuestion(d: AppData, id: string): AppData {
+  return { ...d, pharmacistQuestions: d.pharmacistQuestions.map((q) => (q.id === id ? { ...q, done: !q.done } : q)) }
+}
+
+export function deleteQuestion(d: AppData, id: string): AppData {
+  return { ...d, pharmacistQuestions: d.pharmacistQuestions.filter((q) => q.id !== id) }
+}
+
+export function setPreparedness(d: AppData, householdId: string, itemId: string, status: 'AVAILABLE' | 'MISSING' | null): AppData {
+  const rest = d.preparednessChecks.filter((c) => !(c.householdId === householdId && c.itemId === itemId))
+  return { ...d, preparednessChecks: status ? [...rest, { householdId, itemId, status, updatedAt: now() }] : rest }
 }

@@ -55,6 +55,10 @@ const ROWS: Row[] = [
   ['신신파스아렉스', '', undefined, undefined, '신신제약', '첩부제', '외용 진통소염제(관절·근육)'],
   ['트라스트패취', '', undefined, '피록시캄', 'SK케미칼', '첩부제', '외용 진통소염제(관절·근육)'],
   ['우루사정', '100mg', '100mg', '우르소데옥시콜산', '대웅제약', '정제', '간장질환용제'],
+  // 안전정보 화면 시연용 가상 제품 (실존 제품 아님)
+  ['(예시) 가상약A정', '', undefined, '예시성분A', undefined, '정제', '예시 처방약'],
+  ['(예시) 가상약B정', '', undefined, '예시성분B', undefined, '정제', '예시 처방약'],
+  ['(예시) 레보도파·카르비도파정', '', undefined, '레보도파+카르비도파', undefined, '정제', '항파킨슨제'],
 ]
 
 export const MOCK_PRODUCTS: ProductRecord[] = ROWS.map(([baseName, suffix, strength, ingredient, manufacturer, dosageForm, externalClass], i) => ({

@@ -28,6 +28,18 @@ export function emptyData(): AppData {
     sessions: [],
     surveys: [],
     readReminderIds: [],
+    pharmacistQuestions: [],
+    preparednessChecks: [],
+  }
+}
+
+// 이전 버전에서 저장된 데이터에 새 필드 기본값을 채운다
+export function normalizeData(d: AppData): AppData {
+  return {
+    ...emptyData(),
+    ...d,
+    pharmacistQuestions: d.pharmacistQuestions ?? [],
+    preparednessChecks: d.preparednessChecks ?? [],
   }
 }
 

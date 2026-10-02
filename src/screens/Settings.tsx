@@ -3,6 +3,7 @@ import { useHousehold, useStore } from '../data/store'
 import { addFamilyMember, createHousehold, deleteFamilyMember, deleteHousehold, renameFamilyMember, updateHousehold } from '../data/actions'
 import { addSampleHousehold, removeSampleHouseholds } from '../data/sample'
 import type { AppData } from '../types'
+import { normalizeData } from '../data/defaults'
 import { useNav } from '../nav'
 import { Header } from '../components/ui'
 
@@ -40,7 +41,7 @@ export function Settings() {
     try {
       const d = JSON.parse(await file.text()) as AppData
       if (d.version !== 1 || !Array.isArray(d.medicines)) throw new Error('형식이 다릅니다')
-      if (confirm('현재 기기의 데이터를 백업 파일 내용으로 바꿀까요?')) replaceAll(d)
+      if (confirm('현재 기기의 데이터를 백업 파일 내용으로 바꿀까요?')) replaceAll(normalizeData(d))
     } catch (e) { alert('가져오기 실패: ' + e) }
   }
 
@@ -135,7 +136,7 @@ function SessionHistory() {
       {surveys.map((v) => (
         <div key={v.id} className="history">
           📝 설문 {new Date(v.createdAt).toLocaleDateString('ko-KR')} · 추천 {v.recommendScore ?? '-'}점 · {v.price || '-'} · 재점검 {v.revisitIntent || '-'}
-          <div className="muted small">{[v.mostUseful === '기타' ? v.mostUsefulOther : v.mostUseful, v.feedback].filter(Boolean).join(' / ')}</div>
+          <div className="muted small">{[v.mostUseful === '기타' ? v.mostUsefulOther : v.mostUseful, v.knewApps && `앱 인지: ${v.knewApps}`, v.selfRegister && `직접 등록: ${v.selfRegister}`, v.expertFirst && `전문가 첫 정리: ${v.expertFirst}`, v.feedback].filter(Boolean).join(' / ')}</div>
         </div>
       ))}
     </div>

@@ -4,6 +4,8 @@ import { activeSession } from '../data/actions'
 import { dday, expiryStatus, formatMD, isSoon } from '../lib/dates'
 import { computeReminders, upcomingAppointments } from '../lib/reminders'
 import { useNav } from '../nav'
+import { safetyInfo } from '../services/safety'
+import { PREPAREDNESS_ITEMS, preparednessStatus } from '../services/preparedness'
 import { Empty, MedicineCard, sortMedicines } from '../components/ui'
 
 export function Home() {
@@ -29,6 +31,9 @@ export function Home() {
   const expired = statuses.filter((s) => s === 'expired').length
   const appts = upcomingAppointments(data, household.id).filter((a) => a.daysLeft >= 0)
   const session = activeSession(data, household.id)
+  const critical = safetyInfo.checkInventory(medicines).findings.filter((f) => f.info.level === 'CRITICAL').length
+  const missing = PREPAREDNESS_ITEMS.filter((i) => preparednessStatus(data, household.id, medicines, i) === 'MISSING').length
+  const openQs = data.pharmacistQuestions.filter((q) => q.householdId === household.id && !q.done).length
 
   // 검색: 제품명 / 분류명 / 보관 위치 / 가족 이름
   const query = q.trim().toLowerCase()
@@ -89,6 +94,24 @@ export function Home() {
             </button>
           </div>
 
+          <div className="tool-grid">
+            <button className="card tool" onClick={() => nav.push({ name: 'safety' })}>
+              <span className="tool-icon">🛡️</span>
+              <span>약장 안전확인</span>
+              {critical > 0 && <span className="dot static">🔴 {critical}</span>}
+            </button>
+            <button className="card tool" onClick={() => nav.push({ name: 'prep' })}>
+              <span className="tool-icon">🧰</span>
+              <span>우리집 준비 체크</span>
+              {missing > 0 && <span className="muted small">없음 {missing}</span>}
+            </button>
+            <button className="card tool" onClick={() => nav.push({ name: 'questions' })}>
+              <span className="tool-icon">📝</span>
+              <span>약사 확인 목록</span>
+              {openQs > 0 && <span className="muted small">{openQs}건</span>}
+            </button>
+          </div>
+
           {session ? (
             <button className="card session-cta active" onClick={() => nav.push({ name: 'add' })}>
               🧹 약장 정리 진행 중 — 약 등록 계속하기
@@ -124,13 +147,13 @@ export function Home() {
                 <button key={p.id} className="card family" onClick={() => nav.push({ name: 'list', title: `${p.name} 약`, filter: { memberId: p.id } })}>
                   <div className="family-name">{p.name}</div>
                   <div>처방약 {rx.length}개</div>
-                  <div className="muted small">{next ? `다음 진료 ${next.daysLeft === 0 ? '오늘' : `${next.daysLeft}일 후`}` : '예정일 미입력'}</div>
+                  <div className={next && next.daysLeft <= 3 ? 'warn-text small' : 'muted small'}>{next ? `다음 진료/처방 ${dday(next.daysLeft)}` : '예정일 미입력'}</div>
                 </button>
               )
             })}
             <button className="card family" onClick={() => nav.push({ name: 'list', title: '공용 상비약', filter: { shared: true } })}>
               <div className="family-name">공용 상비약</div>
-              <div>총 {sharedMeds.length}개</div>
+              <div>{sharedMeds.length}개</div>
               {(() => {
                 const n = sharedMeds.filter((m) => isSoon(expiryStatus(m.expirationDate))).length
                 return <div className={n ? 'warn-text small' : 'muted small'}>유효기간 임박 {n}개</div>
