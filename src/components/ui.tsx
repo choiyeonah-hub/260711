@@ -4,11 +4,11 @@ import { useHousehold } from '../data/store'
 import { EXPIRY_LABEL, expiryStatus, formatExp, type ExpiryStatus } from '../lib/dates'
 import { useNav } from '../nav'
 
-export function Header({ title, back, right }: { title: ReactNode; back?: boolean; right?: ReactNode }) {
+export function Header({ title, back, right, onBack }: { title: ReactNode; back?: boolean; right?: ReactNode; onBack?: () => void }) {
   const nav = useNav()
   return (
     <header className="header">
-      {back && <button className="icon-btn" onClick={nav.back} aria-label="뒤로">‹</button>}
+      {back && <button className="icon-btn" onClick={onBack ?? nav.back} aria-label="뒤로">‹</button>}
       <h1>{title}</h1>
       <div className="header-right">{right}</div>
     </header>

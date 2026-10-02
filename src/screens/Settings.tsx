@@ -128,6 +128,7 @@ function SessionHistory() {
       {sessions.map((s) => (
         <div key={s.id} className="history">
           <b>{new Date(s.startedAt).toLocaleDateString('ko-KR')}</b> · {s.summary!.durationMin}분 · 등록 {s.summary!.registeredCount} · 만료 {s.summary!.expiredFound} · 처방 {s.summary!.prescriptionCount}
+          <div className="muted small">사진 {s.summary!.photoEntryCount ?? 0} · 직접 {s.summary!.manualEntryCount ?? 0} · 인식 성공률 {s.summary!.recognitionSuccessRate != null ? `${s.summary!.recognitionSuccessRate}%` : '-'}</div>
           <div className="muted small">{s.storageMethods.join(', ') || '수납방식 미기록'}</div>
         </div>
       ))}

@@ -121,12 +121,15 @@ export function SessionSummary({ id }: { id: string }) {
         <dl className="summary">
           <dt>총 의약품</dt><dd>{sum.householdTotal}개</dd>
           <dt>이번에 등록</dt><dd>{sum.registeredCount}개</dd>
+          <dt>사진 등록</dt><dd>{sum.photoEntryCount ?? 0}개</dd>
+          <dt>직접 입력</dt><dd>{sum.manualEntryCount ?? 0}개</dd>
+          <dt>사진 인식 성공률</dt><dd>{sum.recognitionSuccessRate != null ? `${sum.recognitionSuccessRate}%` : '-'}</dd>
           <dt>만료 발견</dt><dd className={sum.expiredFound ? 'danger-text' : ''}>{sum.expiredFound}개</dd>
           <dt>처방약</dt><dd>{sum.prescriptionCount}개</dd>
           <dt>작업시간</dt><dd>{sum.durationMin}분</dd>
           <dt>수납 방식</dt><dd>{s.storageMethods.join(', ') || '-'}</dd>
         </dl>
-        <p className="muted small">만료 발견 = 등록한 약 중 만료 + 바로 폐기한 만료약</p>
+        <p className="muted small">만료 발견 = 등록한 약 중 만료 + 바로 폐기한 만료약<br />인식 성공 = 사진에서 찾은 후보를 그대로 선택한 경우</p>
       </div>
       <div className="form-actions">
         <button className="btn btn-outline" onClick={() => nav.tab('home')}>홈으로</button>

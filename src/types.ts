@@ -44,7 +44,14 @@ export interface Medicine {
   photo: string | null // 압축된 JPEG dataURL
   memo: string | null
   // 외부 의약품 DB(식약처 등) 연결용. 우리 12분류(categoryId)와 별개로 보관.
-  product?: { source: 'manual' | 'mfds'; externalId?: string; externalCategory?: string }
+  product?: {
+    source: 'manual' | 'mock' | 'mfds'
+    externalId?: string
+    externalCategory?: string
+    manufacturer?: string
+    strength?: string
+    dosageForm?: string
+  }
   sessionId?: string | null
   createdAt: string
   updatedAt: string
@@ -59,6 +66,11 @@ export interface OrganizationSession {
   endedAt: string | null
   storageMethods: string[]
   discardedExpiredCount: number // 등록하지 않고 바로 폐기한 만료약 수
+  // 사진 등록 효과 측정 (이전 버전 데이터에는 없을 수 있음 → ?? 0)
+  manualEntryCount?: number
+  photoEntryCount?: number
+  recognitionSuccessCount?: number // 사진에서 찾은 후보를 그대로 선택
+  recognitionFailureCount?: number // 사진을 찍었지만 검색/직접입력으로 등록
   // 종료 시 스냅샷 (이후 약이 수정/삭제돼도 사업성 데이터는 유지)
   summary: {
     registeredCount: number
@@ -66,6 +78,9 @@ export interface OrganizationSession {
     prescriptionCount: number
     householdTotal: number
     durationMin: number
+    photoEntryCount?: number
+    manualEntryCount?: number
+    recognitionSuccessRate?: number | null // 0~100
   } | null
 }
 

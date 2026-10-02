@@ -1,22 +1,45 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useHousehold, useStore } from '../data/store'
-import { activeSession, deleteMedicine, saveMedicine } from '../data/actions'
+import { activeSession, deleteMedicine, recordEntry, saveMedicine, type EntryMethod } from '../data/actions'
 import { EXPIRY_LABEL, expiryStatus, formatExp, parseExpiryInput } from '../lib/dates'
+import { entryMemory as last } from '../lib/entryMemory'
 import { compressImage } from '../lib/photo'
 import { searchProducts } from '../services/drugDb'
+import { medicineSearch } from '../services/medicineSearch'
+import { suggestCategory } from '../services/categoryMapper'
+import type { ProductRecord } from '../services/mockMedicineDb'
+import type { Medicine } from '../types'
 import { useNav } from '../nav'
 import { Header } from '../components/ui'
 
 const RX_CATEGORY = 'c06'
 
-// '저장 후 다음 약' 사이에 유지할 값 (앱 실행 중에만 기억)
-const last = {
-  keepFamily: true, keepLocation: true, keepCategory: false,
-  familyMemberId: null as string | null, locationName: '', categoryId: '',
-  isPrescription: false, nextAppointmentDate: '',
+// 사진 인식/DB 선택 결과로 미리 채울 값
+export interface Prefill {
+  name?: string
+  categoryId?: string // 제안된 분류 (사용자가 변경 가능)
+  expInput?: string
+  photo?: string | null
+  product?: Medicine['product']
 }
 
-export function MedicineForm({ id }: { id?: string }) {
+export function productRef(p: ProductRecord, source: 'mock' | 'mfds' = 'mock'): Medicine['product'] {
+  return {
+    source, externalId: p.id, externalCategory: p.externalClass,
+    manufacturer: p.manufacturer, strength: p.strength, dosageForm: p.dosageForm,
+  }
+}
+
+interface Props {
+  id?: string
+  prefill?: Prefill
+  entry?: EntryMethod
+  top?: ReactNode // 폼 위에 표시할 내용 (사진 인식 확인 결과 등)
+  onSaveNextPhoto?: () => void // 있으면 '저장 후 📷 다음 약 촬영' 버튼
+  onBack?: () => void
+}
+
+export function MedicineForm({ id, prefill, entry = { method: 'manual' }, top, onSaveNextPhoto, onBack }: Props) {
   const nav = useNav()
   const { data, update } = useStore()
   const { household, members, locations, categories, medicines } = useHousehold()
@@ -39,16 +62,16 @@ export function MedicineForm({ id }: { id?: string }) {
           photo: editing.photo,
         }
       : {
-          name: '',
-          categoryId: last.keepCategory ? last.categoryId : '',
+          name: prefill?.name ?? '',
+          categoryId: prefill?.categoryId ?? (last.keepCategory ? last.categoryId : ''),
           locationName: last.keepLocation ? last.locationName : '',
           familyMemberId: last.keepFamily ? last.familyMemberId : null,
-          expInput: '',
+          expInput: prefill?.expInput ?? '',
           quantity: '',
           memo: '',
           isPrescription: last.keepFamily ? last.isPrescription : false,
           nextAppointmentDate: last.keepFamily ? last.nextAppointmentDate : '',
-          photo: null as string | null,
+          photo: (prefill?.photo ?? null) as string | null,
         }
 
   const [f, setF] = useState(init)
@@ -56,6 +79,15 @@ export function MedicineForm({ id }: { id?: string }) {
   const [errors, setErrors] = useState<string[]>([])
   const [toast, setToast] = useState('')
   const [nameFocused, setNameFocused] = useState(false)
+  const [product, setProduct] = useState<Medicine['product']>(editing?.product ?? prefill?.product ?? { source: 'manual' })
+  const [dbHits, setDbHits] = useState<ProductRecord[]>([])
+  useEffect(() => {
+    let alive = true
+    if (editing || f.name.trim().length < 2) { setDbHits([]); return }
+    medicineSearch.search(f.name, 4).then((r) => alive && setDbHits(r.filter((p) => p.name !== f.name)))
+    return () => { alive = false }
+  }, [f.name, editing])
+  const [suggestedCat, setSuggestedCat] = useState(prefill?.categoryId ?? '')
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((p) => ({ ...p, [k]: v }))
 
   if (!household) return null
@@ -63,6 +95,7 @@ export function MedicineForm({ id }: { id?: string }) {
   const expParsed = parseExpiryInput(f.expInput)
   const expInvalid = f.expInput.trim() !== '' && !expParsed
   const suggestions = nameFocused && !editing ? searchProducts(data, f.name) : []
+  const dbSuggestions = nameFocused ? dbHits.filter((p) => !suggestions.some((x) => x.name === p.name)) : []
 
   // 자주 쓰는 위치 순으로 칩 표시
   const locCount = (lid: string) => medicines.filter((m) => m.storageLocationId === lid).length
@@ -96,23 +129,26 @@ export function MedicineForm({ id }: { id?: string }) {
           isPrescription: f.isPrescription,
           nextAppointmentDate: f.isPrescription && f.nextAppointmentDate ? f.nextAppointmentDate : null,
           photo: f.photo,
-          product: editing?.product ?? { source: 'manual' },
+          product,
           sessionId: editing ? (editing.sessionId ?? null) : (session?.id ?? null),
         },
         editing?.id,
       ),
     )
-    if (editing) return nav.back()
+    if (editing) return (onBack ?? nav.back)()
+    if (session) update((d) => recordEntry(d, session.id, entry))
     Object.assign(last, {
       keepFamily: keep.family, keepLocation: keep.location, keepCategory: keep.category,
       familyMemberId: f.familyMemberId, locationName: f.locationName.trim(), categoryId: f.categoryId,
       isPrescription: f.isPrescription, nextAppointmentDate: f.nextAppointmentDate,
     })
-    if (!next) return nav.back()
+    if (!next) return (onBack ?? nav.back)()
+    if (onSaveNextPhoto) return onSaveNextPhoto()
     const count = session ? data.medicines.filter((m) => m.sessionId === session.id).length + 1 : null
     setToast(`‘${f.name.trim()}’ 저장됨${count ? ` · 이번 정리 ${count}개째` : ''}`)
     setTimeout(() => setToast(''), 2500)
     setF(init())
+    setProduct({ source: 'manual' })
     setErrors([])
     window.scrollTo({ top: 0 })
     nameRef.current?.focus()
@@ -121,7 +157,7 @@ export function MedicineForm({ id }: { id?: string }) {
   function remove() {
     if (!editing || !confirm(`‘${editing.name}’을(를) 삭제할까요?`)) return
     update((d) => deleteMedicine(d, editing.id))
-    nav.back()
+    ;(onBack ?? nav.back)()
   }
 
   async function onPhoto(file?: File) {
@@ -133,8 +169,9 @@ export function MedicineForm({ id }: { id?: string }) {
 
   return (
     <div className="screen form-screen">
-      <Header title={editing ? '약 정보 수정' : '약 등록'} back />
+      {!top && <Header title={editing ? '약 정보 수정' : '약 등록'} back />}
       {toast && <div className="toast">✓ {toast}</div>}
+      {top}
 
       <label className={`field ${err('name') ? 'has-error' : ''}`} data-field="name">
         <span className="label">제품명 <em>*</em></span>
@@ -142,13 +179,16 @@ export function MedicineForm({ id }: { id?: string }) {
           ref={nameRef}
           className="input-lg"
           value={f.name}
-          onChange={(e) => set('name', e.target.value)}
+          onChange={(e) => {
+            set('name', e.target.value)
+            if (product?.source !== 'manual') setProduct({ source: 'manual' }) // 이름을 바꾸면 DB 연결 해제
+          }}
           onFocus={() => setNameFocused(true)}
           onBlur={() => setTimeout(() => setNameFocused(false), 150)}
           placeholder="약 이름 (포장에 적힌 그대로)"
           autoComplete="off"
         />
-        {suggestions.length > 0 && (
+        {suggestions.length + dbSuggestions.length > 0 && (
           <div className="suggest">
             {suggestions.map((s) => (
               <button
@@ -159,6 +199,19 @@ export function MedicineForm({ id }: { id?: string }) {
                 {s.name} <span className="muted small">최근 입력</span>
               </button>
             ))}
+            {dbSuggestions.map((p) => (
+              <button
+                type="button"
+                key={p.id}
+                onClick={() => {
+                  setF((v) => ({ ...v, name: p.name, categoryId: suggestCategory(p) }))
+                  setProduct(productRef(p))
+                  setSuggestedCat(suggestCategory(p))
+                }}
+              >
+                {p.name} <span className="muted small">{[p.manufacturer, p.ingredient].filter(Boolean).join(' · ')}</span>
+              </button>
+            ))}
           </div>
         )}
       </label>
@@ -166,6 +219,7 @@ export function MedicineForm({ id }: { id?: string }) {
       <div className={`field ${err('category') ? 'has-error' : ''}`} data-field="category">
         <span className="label">
           카테고리 <em>*</em>
+          {suggestedCat && f.categoryId === suggestedCat && <span className="muted small">추천 분류 · 바꿀 수 있어요</span>}
           {!editing && <KeepToggle on={keep.category} onChange={(v) => setKeep({ ...keep, category: v })} />}
         </span>
         <div className="cat-grid">
@@ -180,6 +234,7 @@ export function MedicineForm({ id }: { id?: string }) {
             >
               <span className="cat-icon">{c.icon}</span>
               {c.name}
+              {suggestedCat === c.id && <span className="rec">추천</span>}
             </button>
           ))}
         </div>
@@ -297,7 +352,9 @@ export function MedicineForm({ id }: { id?: string }) {
         ) : (
           <>
             <button className="btn btn-outline" onClick={() => save(false)}>저장</button>
-            <button className="btn btn-primary grow" onClick={() => save(true)}>저장 후 다음 약 ›</button>
+            <button className="btn btn-primary grow" onClick={() => save(true)}>
+              {onSaveNextPhoto ? '저장 후 📷 다음 약 촬영' : '저장 후 다음 약 ›'}
+            </button>
           </>
         )}
       </div>

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { NavCtx, type Nav, type Route, type Tab } from './nav'
 import { Home } from './screens/Home'
 import { MedicineForm } from './screens/MedicineForm'
+import { PhotoRegister } from './screens/PhotoRegister'
 import { Cabinet, MedicineList, Notifications, Schedule } from './screens/Browse'
 import { SessionBar, SessionStart, SessionSummary, SurveyScreen } from './screens/Session'
 import { NewHousehold, Settings } from './screens/Settings'
@@ -57,7 +58,7 @@ function renderRoute(r: Route) {
     case 'cabinet': return <Cabinet />
     case 'schedule': return <Schedule />
     case 'settings': return <Settings />
-    case 'add': return <MedicineForm />
+    case 'add': return <PhotoRegister />
     case 'edit': return <MedicineForm id={r.id} />
     case 'list': return <MedicineList title={r.title} filter={r.filter} />
     case 'notifications': return <Notifications />

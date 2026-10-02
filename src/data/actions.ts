@@ -86,6 +86,7 @@ export const activeSession = (d: AppData, householdId: string | null) =>
 export function startSession(d: AppData, householdId: string, storageMethods: string[]): AppData {
   const s: OrganizationSession = {
     id: uid(), householdId, startedAt: now(), endedAt: null, storageMethods, discardedExpiredCount: 0, summary: null,
+    manualEntryCount: 0, photoEntryCount: 0, recognitionSuccessCount: 0, recognitionFailureCount: 0,
   }
   return { ...d, sessions: [...d.sessions, s] }
 }
@@ -96,6 +97,25 @@ export function bumpDiscarded(d: AppData, sessionId: string, delta: number): App
     sessions: d.sessions.map((s) =>
       s.id === sessionId ? { ...s, discardedExpiredCount: Math.max(0, s.discardedExpiredCount + delta) } : s,
     ),
+  }
+}
+
+export type EntryMethod = { method: 'manual' } | { method: 'photo'; recognized: boolean }
+
+// 새 약 등록 1건을 정리 세션 통계에 반영
+export function recordEntry(d: AppData, sessionId: string, e: EntryMethod): AppData {
+  return {
+    ...d,
+    sessions: d.sessions.map((s) => {
+      if (s.id !== sessionId) return s
+      if (e.method === 'manual') return { ...s, manualEntryCount: (s.manualEntryCount ?? 0) + 1 }
+      return {
+        ...s,
+        photoEntryCount: (s.photoEntryCount ?? 0) + 1,
+        recognitionSuccessCount: (s.recognitionSuccessCount ?? 0) + (e.recognized ? 1 : 0),
+        recognitionFailureCount: (s.recognitionFailureCount ?? 0) + (e.recognized ? 0 : 1),
+      }
+    }),
   }
 }
 
@@ -115,6 +135,9 @@ export function endSession(d: AppData, sessionId: string): AppData {
           prescriptionCount: regs.filter((m) => m.isPrescription).length,
           householdTotal: d.medicines.filter((m) => m.householdId === s.householdId).length,
           durationMin: Math.max(1, Math.round((end.getTime() - new Date(s.startedAt).getTime()) / 60000)),
+          photoEntryCount: s.photoEntryCount ?? 0,
+          manualEntryCount: s.manualEntryCount ?? 0,
+          recognitionSuccessRate: s.photoEntryCount ? Math.round(((s.recognitionSuccessCount ?? 0) / s.photoEntryCount) * 100) : null,
         },
       }
     }),
