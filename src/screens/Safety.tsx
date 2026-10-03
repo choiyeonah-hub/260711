@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useHousehold, useStore } from '../data/store'
 import { addQuestion, deleteQuestion, setPreparedness, toggleQuestion } from '../data/actions'
 import { IDENTIFICATION_LABEL, identificationOf, ingredientsOf } from '../data/medicineMeta'
@@ -9,6 +9,7 @@ import { CategoryIcon } from '../components/icons'
 import { Check, ChevronRight, ClipboardList, ClipboardPlus, ExternalLink, MapPin, Printer, Share2 } from 'lucide-react'
 import { PRODUCT_TYPE_LABEL } from '../types'
 import { isMedicine, productTypeOf } from '../data/medicineMeta'
+import { durSeqOf, mfdsAvailable, useOfficialSafety } from '../services/mfds'
 import { PREPAREDNESS_ITEMS, PREP_LABEL, preparednessStatus } from '../services/preparedness'
 import type { Medicine, SafetyFinding, SafetyInformation, SafetyLevel } from '../types'
 import { useNav } from '../nav'
@@ -24,6 +25,9 @@ export function MedicineDetail({ id }: { id: string }) {
   const { data } = useStore()
   const { categories, locations, members } = useHousehold()
   const m = data.medicines.find((x) => x.id === id)
+  const official = useOfficialSafety(m ? [m] : [])
+  const [mfdsOn, setMfdsOn] = useState(false)
+  useEffect(() => { mfdsAvailable().then(setMfdsOn) }, [])
   if (!m) return <div className="screen"><Header title="상세 정보" back /><Empty>삭제된 품목입니다.</Empty></div>
 
   const cat = categories.find((c) => c.id === m.categoryId)
@@ -74,7 +78,15 @@ export function MedicineDetail({ id }: { id: string }) {
         </div>
       ) : (
         <>
-          {infos.length === 0 && <div className="card muted">현재 연결된 공식 안전정보가 없습니다.</div>}
+          {mfdsOn && !durSeqOf(m) && (
+            <div className="card">
+              <p>식약처 DB와 아직 연결되지 않은 약입니다.</p>
+              <p className="muted small">수정 화면에서 제품명을 다시 입력하고 목록에서 식약처 제품을 선택하면 DUR 정보(노인주의·병용금기 등)가 연결됩니다.</p>
+              <button className="btn btn-outline full" onClick={() => nav.push({ name: 'edit', id: m.id })}>식약처 제품 찾기</button>
+            </div>
+          )}
+          <OfficialStatus {...official} />
+          {!official.loading && infos.length === 0 && <div className="card muted">현재 연결된 공식 안전정보가 없습니다.</div>}
           {LEVELS.map((lv) => {
             const list = infos.filter((i) => i.level === lv)
             if (!list.length) return null
@@ -139,6 +151,7 @@ export function SafetyCheck() {
   const nav = useNav()
   const { medicines: items } = useHousehold()
   const medicines = items.filter(isMedicine)
+  const official = useOfficialSafety(medicines)
   const { findings, excluded } = safetyInfo.checkInventory(medicines)
   const [level, setLevel] = useState<SafetyLevel | null>(null)
   const count = (lv: SafetyLevel) => findings.filter((f) => f.info.level === lv).length
@@ -158,7 +171,8 @@ export function SafetyCheck() {
           ))}
         </div>
       </div>
-      {shown.length === 0 && <Empty>공식 안전정보상 표시할 항목이 없습니다.</Empty>}
+      <OfficialStatus {...official} />
+      {shown.length === 0 && !official.loading && <Empty>공식 안전정보상 표시할 항목이 없습니다.</Empty>}
       {shown.map((f) => <FindingCard key={f.id} f={f} meds={f.medicineIds.map((id) => byId.get(id)!).filter(Boolean)} />)}
       {excluded.length > 0 && (
         <>
@@ -172,6 +186,12 @@ export function SafetyCheck() {
       <p className="muted small pad">{SAFETY_NOTE}</p>
     </div>
   )
+}
+
+function OfficialStatus({ loading, failed }: { loading: boolean; failed: number }) {
+  if (loading) return <p className="muted small pad">식약처 DUR 정보를 불러오는 중…</p>
+  if (failed) return <p className="warn-text small pad">식약처 DUR 정보를 {failed}개 약에서 불러오지 못했습니다. 인터넷 연결을 확인하고 다시 열어주세요.</p>
+  return null
 }
 
 function FindingCard({ f, meds }: { f: SafetyFinding; meds: Medicine[] }) {

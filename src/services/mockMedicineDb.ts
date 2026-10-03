@@ -10,6 +10,7 @@ export interface ProductRecord {
   manufacturer?: string
   dosageForm?: string
   externalClass?: string
+  source?: 'mfds' // 식약처 DUR 품목정보에서 온 제품 (id = 품목기준코드)
 }
 
 type Row = [string, string, string | undefined, string | undefined, string | undefined, string | undefined, string | undefined]

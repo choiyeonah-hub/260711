@@ -316,7 +316,7 @@ a.btn { color: var(--text); margin-top: var(--s2); }
 .safety-card.lv-INFO { background: var(--surface); }
 .safety-title { display: flex; align-items: center; gap: var(--s2); font-weight: 700; font-size: 17px; margin-bottom: var(--s2); }
 .official { background: rgba(255, 255, 255, 0.75); border: 1px solid var(--line); border-radius: var(--r-md); padding: var(--s3); margin-bottom: var(--s3); }
-.official p { margin: 4px 0; }
+.official p { margin: 4px 0; white-space: pre-line; }
 .note-card p { color: var(--text-2); }
 .level-row { display: grid; grid-template-columns: 1fr; gap: 6px; margin-top: var(--s3); }
 .level-pill { display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--line); border-radius: var(--r-md); min-height: 52px; padding: 0 var(--s4); font-weight: 600; }

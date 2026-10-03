@@ -1,11 +1,9 @@
 import { MOCK_PRODUCTS, type ProductRecord } from './mockMedicineDb'
+import { mfdsAvailable, searchMfds } from './mfds'
 
 // 의약품 제품 검색 서비스.
-// TODO(식약처 연결): MfdsMedicineSearchService 를 만들어 같은 인터페이스를 구현하고 아래 export 만 교체한다.
-//   - search: 식약처 의약품 제품 허가정보/e약은요 API를 서버(api/)에서 호출 (serviceKey 노출 방지)
-//   - matchFromText: OCR 후보 문자열로 search 를 여러 번 호출해 점수화
+// 서버에 식약처 키(MFDS_SERVICE_KEY)가 있으면 식약처 DUR 품목정보, 없거나 실패하면 예시 DB(mock)
 export interface MedicineSearchService {
-  source: 'mock' | 'mfds'
   search(query: string, limit?: number): Promise<ProductRecord[]>
   matchFromText(texts: string[], limit?: number): Promise<ProductMatch[]>
 }
@@ -78,8 +76,6 @@ export function scoreProduct(text: string, p: ProductRecord): number {
 }
 
 class MockMedicineSearchService implements MedicineSearchService {
-  source = 'mock' as const
-
   async search(query: string, limit = 8) {
     const q = normalize(query)
     if (!q) return []
@@ -105,7 +101,54 @@ class MockMedicineSearchService implements MedicineSearchService {
   }
 }
 
-export const medicineSearch: MedicineSearchService = new MockMedicineSearchService()
+// 검색어용: 띄어쓰기·함량을 빼고 제품명 부분만 (식약처 검색은 제품명 부분일치)
+export function baseQuery(s: string): string {
+  return s
+    .replace(/\s+/g, '')
+    .replace(/\(.*$/, '')
+    .replace(/[\d.]+(mg|밀리그램|밀리그람|ml|mL|g|그램|%|정|캡슐|포).*$/i, '')
+    .trim()
+}
+
+class MfdsMedicineSearchService implements MedicineSearchService {
+  async search(query: string, limit = 8) {
+    const q = baseQuery(query)
+    return q.length < 2 ? [] : (await searchMfds(q)).slice(0, limit)
+  }
+
+  async matchFromText(texts: string[], limit = 3) {
+    const text = normalize(texts.join(' '))
+    const queries = [...new Set(texts.slice(0, 3).map(baseQuery).filter((q) => q.length >= 2))]
+    const found = new Map<string, ProductRecord>()
+    for (const list of await Promise.all(queries.map((q) => searchMfds(q).catch(() => [])))) {
+      for (const p of list) found.set(p.id, p)
+    }
+    return [...found.values()]
+      .map((product) => ({ product, score: scoreProduct(text, product) }))
+      .filter((m) => m.score >= 0.6)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit)
+  }
+}
+
+const mock = new MockMedicineSearchService()
+const mfds = new MfdsMedicineSearchService()
+
+// 식약처 연결이 되면 식약처 결과만 쓴다 (예시 DB와 섞지 않음). 호출 실패 시에만 예시 DB
+export const medicineSearch: MedicineSearchService = {
+  async search(query, limit) {
+    if (await mfdsAvailable()) {
+      try { return await mfds.search(query, limit) } catch (e) { console.warn('식약처 검색 실패 → 예시 DB', e) }
+    }
+    return mock.search(query, limit)
+  },
+  async matchFromText(texts, limit) {
+    if (await mfdsAvailable()) {
+      try { return await mfds.matchFromText(texts, limit) } catch (e) { console.warn('식약처 검색 실패 → 예시 DB', e) }
+    }
+    return mock.matchFromText(texts, limit)
+  },
+}
 
 // 확실한 매칭인지: 1등이 거의 완전 일치이고 2등과 차이가 클 때만
 export function isConfident(matches: ProductMatch[]): boolean {

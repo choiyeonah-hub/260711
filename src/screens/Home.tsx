@@ -8,6 +8,7 @@ import { Bell, BriefcaseMedical, ChevronDown, ClipboardList, House, ListChecks, 
 import { PRODUCT_TYPES, PRODUCT_TYPE_SHORT } from '../types'
 import { isMedicine, productTypeOf } from '../data/medicineMeta'
 import { safetyInfo } from '../services/safety'
+import { useOfficialSafety } from '../services/mfds'
 import { PREPAREDNESS_ITEMS, preparednessStatus } from '../services/preparedness'
 import { Empty, MedicineCard, sortMedicines } from '../components/ui'
 
@@ -16,6 +17,7 @@ export function Home() {
   const { data } = useStore()
   const { household, members, medicines, categories, locations } = useHousehold()
   const [q, setQ] = useState('')
+  useOfficialSafety(medicines) // 식약처 DUR 정보를 받아 두면 '꼭 확인' 건수에 반영됨
 
   if (!household) {
     return (

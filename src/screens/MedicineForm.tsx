@@ -30,7 +30,7 @@ export interface Prefill {
 
 export function productRef(p: ProductRecord, source: 'mock' | 'mfds' = 'mock'): Medicine['product'] {
   return {
-    source, externalId: p.id, externalCategory: p.externalClass,
+    source: p.source ?? source, externalId: p.id, externalCategory: p.externalClass,
     manufacturer: p.manufacturer, strength: p.strength, dosageForm: p.dosageForm,
     ingredients: splitIngredients(p.ingredient),
   }

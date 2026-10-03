@@ -21,6 +21,7 @@ npm run build && npm run preview -- --host   # 배포본과 동일하게 확인
 
 - `main`에 푸시하면 Vercel이 `vercel.json` 설정(Vite 빌드 → `dist`)으로 자동 배포
 - AI 사진 인식: Vercel → Project → Settings → Environment Variables 에 `ANTHROPIC_API_KEY` 등록 후 **Redeploy** (키는 https://console.anthropic.com 에서 발급, 사용 한도 설정 권장)
+- 식약처 DUR: 공공데이터포털 `식품의약품안전처_의약품안전사용서비스(DUR)품목정보` 활용신청 → 일반 인증키(Decoding)를 `MFDS_SERVICE_KEY` 로 등록 후 **Redeploy**. 연결 확인: `/api/mfds?check=1`. 키가 없으면 예시 DB로 동작합니다.
 - 키가 없거나 만료되면 앱은 자동으로 기기 OCR로 동작 (등록 흐름은 막히지 않음)
 
 ### Opus → Haiku 인식률 비교 절차
