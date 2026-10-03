@@ -206,3 +206,7 @@ export function setPreparedness(d: AppData, householdId: string, itemId: string,
   const rest = d.preparednessChecks.filter((c) => !(c.householdId === householdId && c.itemId === itemId))
   return { ...d, preparednessChecks: status ? [...rest, { householdId, itemId, status, updatedAt: now() }] : rest }
 }
+
+export function setMemberNote(d: AppData, memberId: string, reportNote: string): AppData {
+  return { ...d, familyMembers: d.familyMembers.map((m) => (m.id === memberId ? { ...m, reportNote } : m)) }
+}

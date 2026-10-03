@@ -4,7 +4,7 @@ import { markRemindersRead, setLocationType } from '../data/actions'
 import { PRODUCT_TYPES, PRODUCT_TYPE_LABEL, STORAGE_TYPES, type ProductType, type StorageType } from '../types'
 import { productTypeOf } from '../data/medicineMeta'
 import { CategoryIcon } from '../components/icons'
-import { CalendarClock, Hourglass, MapPin } from 'lucide-react'
+import { CalendarClock, FileText, Hourglass, MapPin } from 'lucide-react'
 import { dday, expiryStatus, formatMD, isSoon } from '../lib/dates'
 import { computeReminders, upcomingAppointments } from '../lib/reminders'
 import { useNav, type ListFilter } from '../nav'
@@ -86,6 +86,7 @@ export function Cabinet() {
 }
 
 export function MedicineList({ title, filter }: { title: string; filter: ListFilter }) {
+  const nav = useNav()
   const { medicines, members } = useHousehold()
   const sharedIds = new Set(members.filter((m) => m.isShared).map((m) => m.id))
   const list = sortMedicines(
@@ -103,7 +104,13 @@ export function MedicineList({ title, filter }: { title: string; filter: ListFil
   )
   return (
     <div className="screen">
-      <Header title={title} back />
+      <Header
+        title={title}
+        back
+        right={filter.memberId && members.find((m) => m.id === filter.memberId && !m.isShared)
+          ? <button className="chip" onClick={() => nav.push({ name: 'report', memberId: filter.memberId! })}><FileText size={18} aria-hidden /> 리포트</button>
+          : undefined}
+      />
       <p className="section-title">{list.length}개</p>
       {list.length ? list.map((m) => <MedicineCard key={m.id} m={m} />) : <Empty>해당하는 약이 없습니다.</Empty>}
     </div>
@@ -113,7 +120,7 @@ export function MedicineList({ title, filter }: { title: string; filter: ListFil
 export function Schedule() {
   const nav = useNav()
   const { data } = useStore()
-  const { household, medicines } = useHousehold()
+  const { household, medicines, members } = useHousehold()
   if (!household) return null
   const appts = upcomingAppointments(data, household.id)
   const future = appts.filter((a) => a.daysLeft >= 0)
@@ -144,6 +151,15 @@ export function Schedule() {
         </>
       )}
       {rxNoDate.length > 0 && <p className="muted small pad">예정일이 입력되지 않은 처방약 {rxNoDate.length}개</p>}
+      <p className="section-title">진료 때 보여드릴 약 리포트</p>
+      <div className="chips">
+        {members.filter((m) => !m.isShared).map((m) => (
+          <button key={m.id} className="chip big" onClick={() => nav.push({ name: 'report', memberId: m.id })}>
+            <FileText size={18} aria-hidden /> {m.name}
+          </button>
+        ))}
+      </div>
+
       <p className="section-title">유효기간</p>
       <button className="card row-card" onClick={() => nav.push({ name: 'list', title: '유효기간 확인 필요', filter: { expiry: 'attention' } })}>
         <span className="with-icon"><Hourglass size={20} className="muted" aria-hidden />유효기간 임박·만료 품목</span><b className={attention ? 'warn-text' : ''}>{attention}</b>

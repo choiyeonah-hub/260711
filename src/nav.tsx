@@ -27,6 +27,7 @@ export type Route =
   | { name: 'safety' }
   | { name: 'questions' }
   | { name: 'prep' }
+  | { name: 'report'; memberId: string } // 진료 때 보여드릴 약 리포트
 
 export type Tab = 'home' | 'cabinet' | 'add' | 'schedule' | 'settings'
 

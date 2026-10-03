@@ -361,3 +361,11 @@ a.btn { color: var(--text); margin-top: var(--s2); }
 .tab-icon { display: grid; place-items: center; line-height: 0; }
 .tab-add .tab-icon { width: 54px; height: 54px; border-radius: 50%; background: var(--primary); color: #fff; margin-top: -22px; box-shadow: 0 4px 12px rgba(30, 122, 90, 0.3); }
 .tab-add { color: var(--primary); font-weight: 600; }
+
+/* 진료용 리포트 */
+.report-h { font-weight: 700; font-size: 17px; margin-bottom: var(--s2); }
+.report-list { list-style: none; margin: 0; padding: 0; }
+.report-list li { display: flex; flex-direction: column; padding: var(--s2) 0; border-bottom: 1px solid var(--line); }
+.report-list li:last-child { border-bottom: 0; }
+.report-list .muted { font-size: 15px; }
+.report-facts { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }

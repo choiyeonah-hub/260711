@@ -14,6 +14,7 @@ export interface FamilyMember {
   name: string
   isShared: boolean // '공용' 여부
   order: number
+  reportNote?: string // 진료용 리포트의 간호사 메모
 }
 
 export interface Category {

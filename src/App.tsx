@@ -9,6 +9,7 @@ import { MedicineDetail, PharmacistList, Preparedness, SafetyCheck } from './scr
 import { Cabinet, MedicineList, Notifications, Schedule } from './screens/Browse'
 import { SessionBar, SessionStart, SessionSummary, SurveyScreen } from './screens/Session'
 import { NewHousehold, Settings } from './screens/Settings'
+import { VisitReport } from './screens/Report'
 
 const TABS: { tab: Tab; label: string; icon: LucideIcon }[] = [
   { tab: 'home', label: '홈', icon: House },
@@ -75,5 +76,6 @@ function renderRoute(r: Route) {
     case 'safety': return <SafetyCheck />
     case 'questions': return <PharmacistList />
     case 'prep': return <Preparedness />
+    case 'report': return <VisitReport memberId={r.memberId} />
   }
 }
